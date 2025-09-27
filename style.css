@@ -1,0 +1,132 @@
+/* ==========================================================================
+   CSS Variables - ダークモード/ライトモード対応
+   ========================================================================== */
+:root{
+  /* ダークモード（デフォルト） */
+  --bg:#0b0c10;              /* 背景色 */
+  --fg:#e5e7eb;              /* テキスト色 */
+  --muted:#9aa0a6;           /* 補助テキスト色 */
+  --card:#111217;            /* カード背景色 */
+  --accent:#7dd3fc;          /* アクセントカラー（リンク等） */
+  --accent-weak:#38bdf8;     /* アクセントカラー（ボタン等） */
+  --warn:#f59e0b;            /* 警告色 */
+  --emph:#1f2937;            /* 強調背景色 */
+  --border:#1f2937;          /* ボーダー色 */
+}
+
+[data-theme="light"]{
+  /* ライトモード */
+  --bg:#f5f5f5;
+  --fg:#1a1a1a;
+  --muted:#666666;
+  --card:#ffffff;
+  --accent:#0284c7;
+  --accent-weak:#0ea5e9;
+  --warn:#d97706;
+  --emph:#e5e5e5;
+  --border:#d4d4d4;
+}
+
+/* ==========================================================================
+   Base Styles
+   ========================================================================== */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";}
+
+/* ==========================================================================
+   Header - ヘッダー（タイトル・テーマ切替ボタン）
+   ========================================================================== */
+.header{padding:24px 16px 8px;border-bottom:1px solid var(--border);}
+.header-content{display:flex;justify-content:space-between;align-items:center;max-width:1100px;margin:0 auto;gap:16px;flex-wrap:wrap}
+@media (max-width:600px){.header-content{justify-content:center;text-align:center}}
+.header h1{margin:0;font-size:28px;letter-spacing:.5px}
+.subtitle{margin:6px 0 0;color:var(--muted);font-size:14px}
+
+/* テーマ切替ボタン */
+.theme-toggle{background:var(--card);border:1px solid var(--border);color:var(--fg);padding:10px 14px;border-radius:10px;cursor:pointer;font-size:20px;transition:transform 0.2s}
+.theme-toggle:hover{transform:scale(1.05)}
+.theme-toggle:active{transform:scale(0.95)}
+
+/* ==========================================================================
+   Main Container
+   ========================================================================== */
+.container{max-width:1100px;margin:0 auto;padding:16px}
+
+/* ==========================================================================
+   Tabs - タブナビゲーション
+   ========================================================================== */
+.tabs{display:flex;gap:8px;justify-content:center;margin:12px 0 16px}
+.tab{padding:10px 14px;background:var(--card);border:1px solid var(--border);color:var(--fg);cursor:pointer;border-radius:8px;transition:all 0.2s;position:relative}
+.tab:hover{background:var(--emph);transform:translateY(-2px)}
+.tab.active{background:var(--accent-weak);color:#fff;border-color:var(--accent-weak);box-shadow:0 2px 8px rgba(56,189,248,0.3)}
+.tab.active::after{content:'';position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);width:50%;height:2px;background:var(--accent)}
+
+.panel{display:none;animation:fadeIn 0.3s ease-in}
+.panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.group{margin-bottom:32px}
+.group:last-child{margin-bottom:0}
+.group-title{font-size:18px;font-weight:600;margin:0 0 12px 0;color:var(--fg);display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;min-height:140px;display:flex;flex-direction:column;transition:transform 0.2s,box-shadow 0.2s}
+.card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+.card .label{color:var(--muted);font-size:12px;margin-bottom:6px}
+.card .value{font-size:18px;word-break:break-all}
+.card .value.small{font-size:14px;line-height:1.5}
+.card .hint{margin-top:6px;color:var(--muted);font-size:12px}
+.card.emphasis{outline:1px dashed var(--warn);outline-offset:4px}
+
+.mirror-note{margin-top:10px;color:var(--muted);text-align:center}
+
+.btn{background:var(--accent-weak);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600;transition:all 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+.btn:hover{background:var(--accent);transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,0.15)}
+.btn.secondary{background:var(--card);color:var(--fg);border:1px solid var(--border)}
+.btn.secondary:hover{background:var(--emph);border-color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+
+.toolbar{display:flex;gap:8px;margin-bottom:12px}
+.score-wrap{background:var(--card);border:2px solid var(--accent);border-radius:16px;padding:20px;margin:6px 0 20px;box-shadow:0 4px 12px rgba(56,189,248,0.15)}
+.score-label{color:var(--muted);font-size:14px;margin-bottom:8px}
+.score{font-size:48px;font-weight:800;background:linear-gradient(45deg,var(--accent),#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:8px}
+.score-desc{color:var(--muted);font-size:14px}
+
+.adv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.adv-grid .item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+.adv-grid .k{color:var(--muted);font-size:12px;margin-bottom:6px}
+.adv-grid .v{font-size:14px;white-space:pre-wrap;word-break:break-all}
+
+.privacy{margin-top:10px;color:var(--muted)}
+
+.learn-content{max-width:800px;margin:0 auto}
+.learn-accordion{margin-bottom:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.learn-accordion:last-child{margin-bottom:0}
+.learn-summary{padding:16px 20px;font-size:18px;font-weight:600;color:var(--fg);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;transition:background 0.2s}
+.learn-summary::-webkit-details-marker{display:none}
+.learn-summary::before{content:'▶';margin-right:12px;transition:transform 0.3s;display:inline-block;color:var(--accent)}
+.learn-accordion[open] .learn-summary::before{transform:rotate(90deg)}
+.learn-summary:hover{background:var(--emph)}
+.learn-body{padding:0 20px 20px 20px;animation:slideDown 0.3s ease-out}
+.learn-body p{line-height:1.8;margin:12px 0;color:var(--fg)}
+.learn-body ul{line-height:1.8;margin:12px 0;padding-left:24px;color:var(--fg)}
+.learn-body li{margin:8px 0}
+.learn-body a{color:var(--accent);text-decoration:none;transition:color 0.2s}
+.learn-body a:hover{color:var(--accent-weak);text-decoration:underline}
+@keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+
+footer{border-top:1px solid var(--border);padding-top:24px}
+.footer{margin:24px 0;text-align:center;color:var(--muted)}
+.footer a{color:var(--accent);text-decoration:none;transition:color 0.2s}
+.footer a:hover{color:var(--accent-weak);text-decoration:underline}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--accent);border-radius:12px;padding:12px 16px;box-shadow:0 4px 12px rgba(0,0,0,0.2);color:var(--fg);font-size:14px;z-index:1000;max-width:300px;width:max-content}
+.toast:not(.toast-anchored){animation:slideIn 0.3s ease-out}
+/* Anchored to a UI element: keep readable width and wrap text */
+.toast.toast-anchored{animation:fadeInDown 0.3s ease-out;width:auto;max-width:300px;white-space:normal;word-break:break-word;overflow-wrap:anywhere;bottom:auto;right:auto}
+.toast.success{border-color:#10b981;background:linear-gradient(135deg,var(--card),rgba(16,185,129,0.1))}
+.toast.hide{animation:fadeOut 0.3s ease-in forwards}
+@keyframes slideIn{from{transform:translateX(400px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(400px);opacity:0}}
+@keyframes fadeInDown{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api4.ipify.org https://api6.ipify.org https://ipapi.co; img-src 'self' data: https:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" />
+  <meta name="referrer" content="no-referrer-when-downgrade" />
+  <title>Browser Fingerprint Mirror</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <div>
+        <h1>Browser Fingerprint Mirror（ブラウザー指紋ミラー）</h1>
+        <p class="subtitle">あなたのブラウザーに「映っている」指紋情報を可視化する</p>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" aria-label="テーマ切替">
+        <span class="theme-icon">☀️</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+    <nav class="tabs" role="tablist" aria-label="modes">
+      <button class="tab active" data-tab="simple" role="tab" aria-selected="true">シンプル</button>
+      <button class="tab" data-tab="advanced" role="tab" aria-selected="false">詳細・分析</button>
+      <button class="tab" data-tab="learn" role="tab" aria-selected="false">座学</button>
+    </nav>
+
+    <!-- シンプルモード -->
+    <section id="simple" class="panel active" role="tabpanel" aria-label="simple">
+      <div class="group">
+        <h3 class="group-title">🖥️ ブラウザー・システム</h3>
+        <div class="grid">
+          <div class="card">
+            <div class="label">ブラウザー</div>
+            <div class="value" id="simple-browser">-</div>
+            <div class="hint">User-Agent/UA-CHから推定</div>
+          </div>
+          <div class="card">
+            <div class="label">OS</div>
+            <div class="value" id="simple-os">-</div>
+          </div>
+          <div class="card">
+            <div class="label">画面解像度</div>
+            <div class="value" id="simple-res">-</div>
+            <div class="hint">devicePixelRatio考慮</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3 class="group-title">🌐 ネットワーク</h3>
+        <div class="grid">
+          <div class="card">
+            <div class="label">IPv4アドレス</div>
+            <div class="value" id="simple-ipv4">-</div>
+            <div class="hint">外部API経由で取得</div>
+          </div>
+          <div class="card">
+            <div class="label">IPv6アドレス</div>
+            <div class="value" id="simple-ipv6">-</div>
+            <div class="hint">外部API経由で取得</div>
+          </div>
+          <div class="card">
+            <div class="label">ISP / プロバイダー</div>
+            <div class="value" id="simple-isp">-</div>
+            <div class="hint">組織名またはASN情報</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3 class="group-title">🌍 地域・言語</h3>
+        <div class="grid">
+          <div class="card">
+            <div class="label">言語</div>
+            <div class="value" id="simple-lang">-</div>
+          </div>
+          <div class="card">
+            <div class="label">タイムゾーン</div>
+            <div class="value" id="simple-tz">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3 class="group-title">⚙️ ハードウェア</h3>
+        <div class="grid">
+          <div class="card">
+            <div class="label">タッチ/コア数/メモリ</div>
+            <div class="value" id="simple-hw">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3 class="group-title">🔒 プライバシー設定</h3>
+        <div class="grid">
+          <div class="card">
+            <div class="label">Cookie / DNT</div>
+            <div class="value" id="simple-cookie-dnt">-</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 詳細・分析 -->
+    <section id="advanced" class="panel" role="tabpanel" aria-label="advanced">
+      <div class="toolbar">
+        <button class="btn" id="refresh-adv">再取得</button>
+        <button class="btn secondary" id="copy-json">JSONコピー</button>
+      </div>
+
+      <div class="score-wrap">
+        <div class="score-label">ユニーク度スコア</div>
+        <div class="score" id="unique-score">--</div>
+        <div class="score-desc" id="score-desc">環境の珍しさを0〜100で推定（ローカル推定）</div>
+      </div>
+
+      <div class="adv-grid" id="adv-grid">
+        <!-- 動的に項目カードを挿入 -->
+      </div>
+
+      <details class="privacy">
+        <summary>プライバシー / 免責</summary>
+        <ul>
+          <li>このページはクライアントサイドのみで動作し、データは外部送信しません。</li>
+          <li>ユニーク度スコアは単純モデルの推定であり、厳密な統計に基づくものではありません。</li>
+          <li>Canvas/WebGL等の「指紋化し得る」値は教育目的で表示しています。</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- 座学 -->
+    <section id="learn" class="panel" role="tabpanel" aria-label="learn">
+      <div class="learn-content">
+        <details class="learn-accordion" open>
+          <summary class="learn-summary">📚 ブラウザー指紋（Browser Fingerprinting）とは</summary>
+          <div class="learn-body">
+            <p>
+              ブラウザー指紋とは、ブラウザーが公開する様々な環境情報（User-Agent、画面解像度、言語設定、タイムゾーン、インストールされたフォントやプラグイン、Canvas/WebGLの描画特性など）を組み合わせて、個々のユーザーを識別する技術です。
+            </p>
+            <p>
+              Cookie やローカルストレージを使わずとも、これらの情報の組み合わせが十分にユニークであれば、サイトをまたいでユーザーを追跡することが可能になります。
+            </p>
+          </div>
+        </details>
+
+        <details class="learn-accordion">
+          <summary class="learn-summary">🔍 なぜ指紋情報が問題なのか</summary>
+          <div class="learn-body">
+            <ul>
+              <li><strong>ユーザーの同意なしに追跡される</strong>: Cookie は削除できますが、ブラウザー環境は簡単には変えられません</li>
+              <li><strong>匿名モードでも無効</strong>: シークレットモードやプライベートブラウジングでも、ハードウェアやシステム情報は隠せません</li>
+              <li><strong>複数サイト間での追跡</strong>: 異なるサイトでも同じ指紋情報で「同一人物」と判定される可能性があります</li>
+              <li><strong>プロファイリングのリスク</strong>: 閲覧履歴と組み合わせることで、興味関心や行動パターンが分析されます</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="learn-accordion">
+          <summary class="learn-summary">🛡️ 対策方法</summary>
+          <div class="learn-body">
+            <ul>
+              <li><strong>プライバシー重視ブラウザーの利用</strong>: Tor Browser、Brave などは指紋対策機能を持っています</li>
+              <li><strong>拡張機能の活用</strong>: Canvas Blocker、Privacy Badger などで一部の指紋情報を隠蔽できます</li>
+              <li><strong>JavaScript の制限</strong>: 多くの指紋情報は JavaScript 経由で取得されるため、制限することで対策できます（ただし利便性は低下）</li>
+              <li><strong>一般的な環境を使う</strong>: ユニーク度が低い環境（主流のOS、ブラウザー、解像度）を使うと、他のユーザーに紛れやすくなります</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="learn-accordion">
+          <summary class="learn-summary">⚖️ 指紋情報の限界</summary>
+          <div class="learn-body">
+            <p>
+              ブラウザー指紋だけで「住所」や「本名」などの個人情報が直接漏洩するわけではありません。あくまで「同じブラウザー環境を使っている人物」として識別されるだけです。
+            </p>
+            <p>
+              ただし、ログイン情報や購入履歴、位置情報などと組み合わせることで、より詳細なプロファイリングが可能になります。
+            </p>
+          </div>
+        </details>
+
+        <details class="learn-accordion">
+          <summary class="learn-summary">📖 参考リンク</summary>
+          <div class="learn-body">
+            <ul>
+              <li><a href="https://www.ugtop.com/spill.shtml" target="_blank" rel="noopener noreferrer">確認くん</a> - ブラウザー・接続情報の総合確認</li>
+              <li><a href="https://env.b4iine.net/isp.php" target="_blank" rel="noopener noreferrer">プロバイダー確認君</a> - IPアドレスとISP情報を確認</li>
+              <li><a href="https://amiunique.org/" target="_blank" rel="noopener noreferrer">Am I Unique?</a> - ブラウザー指紋のユニーク度を測定</li>
+              <li><a href="https://coveryourtracks.eff.org/" target="_blank" rel="noopener noreferrer">Cover Your Tracks (EFF)</a> - 指紋追跡への耐性をテスト</li>
+              <li><a href="https://browserleaks.com/" target="_blank" rel="noopener noreferrer">BrowserLeaks</a> - ブラウザーから漏洩する情報の総合チェック</li>
+              <li><a href="https://www.torproject.org/" target="_blank" rel="noopener noreferrer">Tor Project</a> - 匿名性重視のブラウザー</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer">
+      🔗 GitHubリポジトリはこちら（
+      <a href="https://github.com/ipusiron/browser-fingerprint-mirror" target="_blank" rel="noopener noreferrer">ipusiron/browser-fingerprint-mirror</a>
+      ）
+    </div>
+  </footer>
+
+  <script src="./script.js"></script>
+</body>
+</html>
