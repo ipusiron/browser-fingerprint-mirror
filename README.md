@@ -1,11 +1,43 @@
 <!--
 ---
-title: Browser Fingerprint Mirror
-category: browser-fingerprinting
-difficulty: 1
-description: A web tool that visualizes browser fingerprinting information (UA, resolution, language, timezone, etc.) like a digital mirror.
-tags: [browser, fingerprinting, privacy, security, education, visualization, javascript]
-demo: https://ipusiron.github.io/browser-fingerprint-mirror/
+id: day077
+slug: browser-fingerprint-mirror
+
+title: "Browser Fingerprint Mirror"
+
+subtitle_ja: "ブラウザ指紋ミラー"
+subtitle_en: "Visualize your browser's fingerprint like a digital mirror"
+
+description_ja: "ブラウザーが公開する環境情報（UA、解像度、言語、タイムゾーン、Canvas/WebGL/Audio指紋など）を可視化し、ユニーク度スコアを算出する教育用ツール"
+description_en: "An educational web tool that visualizes browser fingerprinting information (UA, resolution, language, timezone, Canvas/WebGL/Audio fingerprints, etc.) and calculates a uniqueness score"
+
+category_ja:
+  - プライバシー
+  - Webセキュリティ
+  - ブラウザ指紋
+category_en:
+  - Privacy
+  - Web Security
+  - Browser Fingerprinting
+
+difficulty: 2
+
+tags:
+  - browser
+  - fingerprinting
+  - privacy
+  - security
+  - education
+  - visualization
+  - javascript
+  - canvas
+  - webgl
+  - audio
+
+repo_url: "https://github.com/ipusiron/browser-fingerprint-mirror"
+demo_url: "https://ipusiron.github.io/browser-fingerprint-mirror/"
+
+hub: true
 ---
 -->
 
