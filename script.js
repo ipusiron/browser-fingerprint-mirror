@@ -1,546 +1,438 @@
-/* Browser Fingerprint Mirror
- * ブラウザー指紋情報を可視化する教育用ツール
- *
- * 機能：
- * - シンプルモード：基本的な環境情報（ブラウザー、OS、IP、ISP等）を表示
- * - 詳細・分析モード：詳細な指紋情報とユニーク度スコアを計算
- * - 座学モード：ブラウザー指紋の仕組みと対策を解説
- *
- * セキュリティ：
- * - データは外部送信なし（完全クライアントサイド）
- * - IP/ISP情報のみ外部API（ipify.org、ipapi.co）を利用
+/* Browser Fingerprint Mirror の画面側（DOM の組み立てと操作だけ）
+ * 計算は js/fp-core.js（FPCore）、値の収集は js/fp-collect.js（FPCollect）、文言は js/messages.js（FPMessages）
  */
+(function () {
+  'use strict';
 
-// DOMセレクタのショートハンド
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+  const C = globalThis.FPCore;
+  const COL = globalThis.FPCollect;
+  const M = globalThis.FPMessages;
+  const I18N = globalThis.FPI18n;
+  const t = M.t;
 
-/* ==========================================================================
-   タブ切替
-   ========================================================================== */
-// シンプル/詳細・分析/座学の3つのタブを切り替える
-$$('.tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    // 全てのタブとパネルから active を削除
-    $$('.tab').forEach(b => b.classList.remove('active'));
-    $$('.panel').forEach(p => p.classList.remove('active'));
-    // クリックされたタブとそれに対応するパネルに active を追加
-    btn.classList.add('active');
-    const id = btn.dataset.tab;
-    document.getElementById(id).classList.add('active');
-  });
-});
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-/* ==========================================================================
-   シンプルモード - 基本情報表示
-   ========================================================================== */
-// シンプルモードの基本情報を全て取得して表示
-async function fillSimple() {
-  // User-Agentとプラットフォーム情報を取得
-  const ua = navigator.userAgent;
-  const uaData = navigator.userAgentData?.brands?.map(b => `${b.brand} ${b.version}`).join(', ');
-  const platform = navigator.userAgentData?.platform || navigator.platform || 'unknown';
+  const LAST_VISIT_KEY = 'bfm-last-visit';
+  const THEME_KEY = 'theme';
+  const TOAST_MAX_WIDTH = 300;
+  const SUN = String.fromCodePoint(0x2600, 0xfe0f);
+  const MOON = String.fromCodePoint(0x1f319);
+  const MARK_ON = String.fromCodePoint(0x25cf);
+  const MARK_OFF = String.fromCodePoint(0x25cb);
+  const MARK_NA = String.fromCodePoint(0x2013);
+  const TIMES = String.fromCodePoint(0xd7);
+  const DASH = String.fromCodePoint(0x2014);
+  const SLASH = String.fromCodePoint(0xff0f);
 
-  // ブラウザーとOSを推測
-  const browserGuess = guessBrowser(ua, uaData);
-  const osGuess = guessOS(ua, platform);
+  const state = { data: null, firstData: null, ids: [], network: null, lastVisit: null, building: false, previousVisit: null, netStatus: null };
 
-  // 基本情報を表示
-  $('#simple-browser').textContent = browserGuess;
-  $('#simple-os').textContent = osGuess;
-  $('#simple-lang').textContent = navigator.languages?.join(', ') || navigator.language || '-';
-  $('#simple-tz').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || '-';
+  /* ---------- localStorage（使えない環境でも落ちない） ---------- */
+  function lsGet(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      return null;
+    }
+  }
+  function lsSet(key, value) {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  function lsRemove(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      // 消せなくても続ける
+    }
+  }
 
-  // 画面解像度とデバイスピクセル比
-  const dpr = window.devicePixelRatio || 1;
-  const res = `${window.screen.width}×${window.screen.height} @${dpr.toFixed(2)}`;
-  $('#simple-res').textContent = res;
+  /* ---------- タブ ---------- */
+  const TAB_KEYS = ['simple', 'advanced', 'learn'];
 
-  // Cookie と Do Not Track 設定
-  const cookieEnabled = navigator.cookieEnabled ? 'Cookie: 有効' : 'Cookie: 無効';
-  const dnt = navigator.doNotTrack == '1' || window.doNotTrack == '1' ? 'DNT: 有効' : 'DNT: 無効';
-  $('#simple-cookie-dnt').textContent = `${cookieEnabled} / ${dnt}`;
+  function selectTab(key, focus) {
+    for (const btn of $$('.tab')) {
+      const on = btn.dataset.tab === key;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      btn.tabIndex = on ? 0 : -1;
+      if (on && focus) btn.focus();
+    }
+    for (const panel of $$('.panel')) panel.classList.toggle('active', panel.id === key);
+  }
 
-  // ハードウェア情報（タッチ対応、CPUコア数、メモリ容量）
-  const touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-  const cores = navigator.hardwareConcurrency ?? '?';
-  const mem = navigator.deviceMemory ? `${navigator.deviceMemory}GB` : '?';
-  $('#simple-hw').textContent = `Touch:${touch ? 'あり' : 'なし'} / コア:${cores} / メモリ:${mem}`;
+  function initTabs() {
+    for (const btn of $$('.tab')) {
+      btn.addEventListener('click', () => selectTab(btn.dataset.tab, false));
+      btn.addEventListener('keydown', (e) => {
+        const i = TAB_KEYS.indexOf(btn.dataset.tab);
+        let next = null;
+        if (e.key === 'ArrowRight') next = TAB_KEYS[(i + 1) % TAB_KEYS.length];
+        else if (e.key === 'ArrowLeft') next = TAB_KEYS[(i - 1 + TAB_KEYS.length) % TAB_KEYS.length];
+        else if (e.key === 'Home') next = TAB_KEYS[0];
+        else if (e.key === 'End') next = TAB_KEYS[TAB_KEYS.length - 1];
+        if (next) {
+          e.preventDefault();
+          selectTab(next, true);
+        }
+      });
+    }
+  }
 
-  // ネットワーク情報（IPv4/IPv6/ISP）を外部APIから取得
-  await fetchIPInfo();
-}
+  /* ---------- テーマ（保存がなければ OS の設定に従う） ---------- */
+  function initTheme() {
+    const saved = lsGet(THEME_KEY);
+    let theme = saved === 'light' || saved === 'dark' ? saved : null;
+    if (!theme) theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    applyTheme(theme);
+  }
 
-// 外部API経由でIPアドレスとISP情報を取得
-// ipify.org: IPv4/IPv6アドレス取得
-// ipapi.co: ISP/組織情報取得
-async function fetchIPInfo() {
-  const ipv4El = $('#simple-ipv4');
-  const ipv6El = $('#simple-ipv6');
-  const ispEl = $('#simple-isp');
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const btn = $('#theme-toggle');
+    if (btn) {
+      const icon = btn.querySelector('.theme-icon');
+      if (icon) icon.textContent = theme === 'dark' ? SUN : MOON;
+      btn.setAttribute('aria-label', t(theme === 'dark' ? 'theme.toLight' : 'theme.toDark'));
+    }
+  }
 
-  try {
-    // ローディング表示
-    // キャッシュから取得（5分間有効）
-    const cacheKey = 'ipinfo_cache';
-    const cacheTimeKey = 'ipinfo_cache_time';
-    const cacheExpiry = 5 * 60 * 1000; // 5分
-    const now = Date.now();
-    const cachedTime = localStorage.getItem(cacheTimeKey);
-    const cached = localStorage.getItem(cacheKey);
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    lsSet(THEME_KEY, next);
+  }
 
-    if (cached && cachedTime && (now - parseInt(cachedTime)) < cacheExpiry) {
-      // キャッシュから復元
-      const data = JSON.parse(cached);
-      ipv4El.textContent = data.ipv4 || '未対応または取得失敗';
-      ipv6El.textContent = data.ipv6 || '未対応または取得失敗';
-      ispEl.textContent = data.isp || '取得失敗';
+  /* ---------- トースト ---------- */
+  function showToast(message, type, anchor) {
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (type ? ' ' + type : '');
+    toast.setAttribute('role', 'status');
+    toast.textContent = message;
+    if (anchor) {
+      toast.classList.add('toast-anchored');
+      const rect = anchor.getBoundingClientRect();
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - TOAST_MAX_WIDTH - 8));
+      toast.style.cssText = 'position: fixed; top: ' + (rect.bottom + 8) + 'px; left: ' + left + 'px;';
+    }
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('hide');
+      setTimeout(() => toast.remove(), 300);
+    }, 2500);
+  }
+
+  /* ---------- シンプル ---------- */
+  function sourceLabel(source) {
+    if (source === 'ua-ch') return t('simple.sourceUaCh');
+    if (source === 'ua' || source === 'ua+touch') return t('simple.sourceUa');
+    if (source === 'platform') return t('simple.sourcePlatform');
+    return t('simple.sourceNone');
+  }
+
+  function fillSimple(data) {
+    const ua = data.ua || {};
+    const os = C.detectOS({ ua: ua.userAgent, chPlatform: ua.uaData && ua.uaData.platform, platform: ua.platform, maxTouchPoints: data.hardware.maxTouchPoints });
+    const br = C.detectBrowser({ ua: ua.userAgent, brands: ua.uaData && ua.uaData.brands });
+    $('#simple-browser').textContent = br.version ? br.name + ' ' + br.version : br.name;
+    $('#simple-os').textContent = os.name;
+    $('#simple-os-source').textContent = sourceLabel(os.source);
+    const sc = data.screen;
+    $('#simple-res').textContent = sc.width + TIMES + sc.height + ' @' + Number(sc.devicePixelRatio).toFixed(2);
+    const langs = data.language.languages && data.language.languages.length ? data.language.languages : [data.language.language];
+    $('#simple-lang').textContent = langs.filter(Boolean).join(', ') || '-';
+    $('#simple-tz').textContent = data.time.timezone || '-';
+    const hw = data.hardware;
+    $('#simple-hw').textContent = t('simple.hwValue', {
+      touch: t(hw.touchCapable ? 'simple.yes' : 'simple.no'),
+      cores: hw.hardwareConcurrency === null ? '?' : hw.hardwareConcurrency,
+      mem: hw.deviceMemory === null ? '?' : hw.deviceMemory + 'GB',
+    });
+    const pv = data.privacy;
+    const gpc = pv.globalPrivacyControl === true ? 'simple.gpcOn' : pv.globalPrivacyControl === false ? 'simple.gpcOff' : 'simple.gpcNa';
+    $('#simple-cookie-dnt').textContent = [t(pv.cookieEnabled ? 'simple.cookieOn' : 'simple.cookieOff'), t(pv.doNotTrack ? 'simple.dntOn' : 'simple.dntOff'), t(gpc)].join(' / ');
+    fillNetwork(state.network);
+  }
+
+  function fillNetwork(net) {
+    const none = t('net.notFetched');
+    $('#simple-ipv4').textContent = net ? (net.ipv4 || t('net.unsupported')) : none;
+    $('#simple-ipv6').textContent = net ? (net.ipv6 || t('net.unsupported')) : none;
+    let isp = none;
+    if (net) {
+      if (net.isp) isp = net.asn ? net.isp + ' / ' + net.asn : net.isp;
+      else if (net.status === 'rateLimited') isp = t('net.rateLimited');
+      else isp = t('net.failed');
+    }
+    $('#simple-isp').textContent = isp;
+  }
+
+  function setNetStatus(key, params) {
+    state.netStatus = key ? { key, params: params || null } : null;
+    $('#net-status').textContent = key ? t(key, params) : '';
+  }
+
+  async function onFetchIp() {
+    const btn = $('#fetch-ip');
+    const status = $('#net-status');
+    btn.disabled = true;
+    status.textContent = t('net.loading');
+    $('#simple-ipv4').textContent = t('net.loading');
+    $('#simple-ipv6').textContent = t('net.loading');
+    $('#simple-isp').textContent = t('net.loading');
+    try {
+      const net = await COL.fetchNetwork({ fetchFn: (url) => fetch(url), now: Date.now(), getItem: lsGet, setItem: lsSet });
+      state.network = net;
+      if (state.data) state.data.network = net;
+      fillNetwork(net);
+      const at = new Date(net.fetchedAt).toLocaleTimeString();
+      if (net.status === 'cache') setNetStatus('net.statusCache', { at });
+      else if (net.status === 'rateLimited') setNetStatus('net.statusRateLimited');
+      else if (net.status === 'noisp') setNetStatus('net.statusNoisp');
+      else if (net.status === 'failed') setNetStatus('net.statusFailed');
+      else setNetStatus('net.statusOk', { at });
+      renderAttributes();
+    } catch (e) {
+      state.network = null;
+      fillNetwork({ status: 'failed' });
+      setNetStatus('net.statusFailed');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  /* ---------- 詳細・分析 ---------- */
+  function currentId() {
+    return state.data ? C.fingerprintId(state.data).id : null;
+  }
+
+  function renderId() {
+    $('#fp-id').textContent = currentId() || '--';
+  }
+
+  function renderStability() {
+    const n = state.ids.length;
+    const el = $('#fp-stability');
+    if (n <= 1) {
+      el.textContent = t('adv.stabilityFirst');
       return;
     }
+    const diff = C.diffAttributes(state.firstData, state.data);
+    if (diff.length === 0 && state.ids.every((id) => id === state.ids[0])) el.textContent = t('adv.stabilitySame', { n });
+    else el.textContent = t('adv.stabilityDiff', { n, keys: diff.map((k) => t('attr.' + k)).join(', ') || '-' });
+  }
 
-    ipv4El.textContent = '取得中...';
-    ipv6El.textContent = '取得中...';
-    ispEl.textContent = '取得中...';
-
-    // IPv4とIPv6を並列取得（Promise.allSettledで失敗を許容）
-    const [ipv4Data, ipv6Data] = await Promise.allSettled([
-      fetch('https://api4.ipify.org?format=json').then(r => r.json()),
-      fetch('https://api6.ipify.org?format=json').then(r => r.json())
-    ]);
-
-    // IPv4アドレスの処理
-    const ipv4 = (ipv4Data.status === 'fulfilled' && ipv4Data.value.ip)
-      ? ipv4Data.value.ip
-      : '未対応または取得失敗';
-    ipv4El.textContent = ipv4;
-
-    // IPv6アドレスの処理（環境によっては未対応）
-    const ipv6 = (ipv6Data.status === 'fulfilled' && ipv6Data.value.ip)
-      ? ipv6Data.value.ip
-      : '未対応または取得失敗';
-    ipv6El.textContent = ipv6;
-
-    // ISP/組織情報の取得（レート制限対策：429エラーを考慮）
-    let isp = '取得失敗';
+  function readLastVisit() {
+    const raw = lsGet(LAST_VISIT_KEY);
+    if (!raw) return null;
     try {
-      const geoResponse = await fetch('https://ipapi.co/json/');
-      if (geoResponse.ok) {
-        const geoData = await geoResponse.json();
-        isp = geoData.org || geoData.asn || '-';
-      } else if (geoResponse.status === 429) {
-        isp = 'レート制限（しばらく待ってから再試行）';
-      }
-    } catch (err) {
-      // CORS/ネットワークエラー時
-      isp = '取得失敗（API制限の可能性）';
+      const v = JSON.parse(raw);
+      if (v && typeof v.id === 'string' && /^[0-9a-f]{16}$/.test(v.id) && Number.isFinite(v.at)) return { id: v.id, at: v.at };
+    } catch (e) {
+      // 壊れていれば無いものとして扱う
     }
-    ispEl.textContent = isp;
-
-    // キャッシュに保存
-    localStorage.setItem(cacheKey, JSON.stringify({ ipv4, ipv6, isp }));
-    localStorage.setItem(cacheTimeKey, now.toString());
-
-  } catch (error) {
-    console.error('IP情報取得エラー:', error);
-    // エラー時のフォールバック処理
-    if (ipv4El.textContent === '取得中...') ipv4El.textContent = '取得失敗';
-    if (ipv6El.textContent === '取得中...') ipv6El.textContent = '取得失敗';
-    if (ispEl.textContent === '取得中...') ispEl.textContent = '取得失敗（API制限の可能性）';
-  }
-}
-
-/* ==========================================================================
-   詳細・分析モード - 詳細な指紋情報とユニーク度スコア
-   ========================================================================== */
-$('#refresh-adv')?.addEventListener('click', buildAdvanced);
-$('#copy-json')?.addEventListener('click', copyAdvancedJSON);
-
-async function buildAdvanced() {
-  const data = await collectAll();
-  renderAdvanced(data);
-  const score = uniquenessScore(data);
-  $('#unique-score').textContent = String(score);
-  $('#score-desc').textContent = explainScore(score);
-}
-
-async function copyAdvancedJSON() {
-  const data = await collectAll();
-  const text = JSON.stringify(data, null, 2);
-  await navigator.clipboard.writeText(text);
-  showToast('環境情報のJSONをコピーしました', 'success', $('#copy-json'));
-}
-
-function showToast(message, type = '', anchorElement = null) {
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-
-  if (anchorElement) {
-    toast.classList.add('toast-anchored');
-    const rect = anchorElement.getBoundingClientRect();
-    const maxToastWidth = 320; // keep within viewport
-    const left = Math.max(8, Math.min(rect.left, (window.innerWidth - maxToastWidth - 8)));
-    toast.style.cssText = `position: fixed; top: ${rect.bottom + 8}px; left: ${left}px;`;
-  }
-
-  document.body.appendChild(toast);
-
-  setTimeout(() => {
-    toast.classList.add('hide');
-    setTimeout(() => toast.remove(), 300);
-  }, 2500);
-}
-
-/* ---------- コレクション ---------- */
-async function collectAll() {
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const dpr = window.devicePixelRatio || 1;
-  const lang = {
-    language: navigator.language,
-    languages: navigator.languages || []
-  };
-  const storage = {
-    localStorage: hasLocalStorage(),
-    sessionStorage: hasSessionStorage(),
-    indexedDB: !!window.indexedDB
-  };
-  const cookie = navigator.cookieEnabled;
-  const dnt = (navigator.doNotTrack == '1' || window.doNotTrack == '1') ? true : false;
-  const hw = {
-    deviceMemory: navigator.deviceMemory ?? null,
-    hardwareConcurrency: navigator.hardwareConcurrency ?? null,
-    maxTouchPoints: navigator.maxTouchPoints ?? 0,
-    touchCapable: ('ontouchstart' in window) || (navigator.maxTouchPoints > 0)
-  };
-  const screenInfo = {
-    width: screen.width, height: screen.height,
-    availWidth: screen.availWidth, availHeight: screen.availHeight,
-    colorDepth: screen.colorDepth, pixelDepth: screen.pixelDepth,
-    devicePixelRatio: dpr
-  };
-  const ua = {
-    userAgent: navigator.userAgent,
-    uaDataBrands: navigator.userAgentData?.brands || null,
-    uaDataPlatform: navigator.userAgentData?.platform || null,
-    platform: navigator.platform || null,
-    vendor: navigator.vendor || null
-  };
-  const time = {
-    timezone: tz,
-    offsetMin: new Date().getTimezoneOffset()
-  };
-  const media = {
-    prefersColorScheme: getPrefers('(prefers-color-scheme: dark)') ? 'dark' :
-                        (getPrefers('(prefers-color-scheme: light)') ? 'light' : 'no-preference'),
-    reducedMotion: getPrefers('(prefers-reduced-motion: reduce)') ? 'reduce' : 'no-preference'
-  };
-  const webgl = getWebGLInfo();
-  const canvas = getCanvasHash();
-  const audio = await getAudioHash().catch(() => null);
-
-  const fonts = await detectFontSupport(['monospace','serif','sans-serif']); // ダミー例（実フォント同定は難）
-  const plugins = getPlugins();
-  const network = await getNetworkInfo();
-
-  return {
-    timestamp: new Date().toISOString(),
-    ua, screen: screenInfo, language: lang, time, storage, cookieEnabled: cookie, doNotTrack: dnt,
-    hardware: hw, media, webgl, canvas, audio, fonts, plugins, network
-  };
-}
-
-/* ---------- レンダリング ---------- */
-function renderAdvanced(data) {
-  const grid = $('#adv-grid');
-  grid.innerHTML = '';
-  const entries = [
-    ['Timestamp', data.timestamp],
-    ['User-Agent', JSON.stringify(data.ua, null, 2)],
-    ['Screen', JSON.stringify(data.screen, null, 2)],
-    ['Language', JSON.stringify(data.language, null, 2)],
-    ['Time / TZ', JSON.stringify(data.time, null, 2)],
-    ['Storage', JSON.stringify(data.storage, null, 2)],
-    ['Cookie / DNT', JSON.stringify({cookieEnabled:data.cookieEnabled, doNotTrack:data.doNotTrack}, null, 2)],
-    ['Hardware', JSON.stringify(data.hardware, null, 2)],
-    ['Media Queries', JSON.stringify(data.media, null, 2)],
-    ['WebGL', JSON.stringify(data.webgl, null, 2)],
-    ['Canvas Hash', data.canvas?.hash || '-'],
-    ['Audio Hash', data.audio?.hash || '-'],
-    ['Fonts (rough)', JSON.stringify(data.fonts, null, 2)],
-    ['Plugins', JSON.stringify(data.plugins, null, 2)],
-    ['Network / ISP', JSON.stringify(data.network, null, 2)],
-  ];
-  for (const [k, v] of entries) {
-    const el = document.createElement('div');
-    el.className = 'item';
-    const keyEl = document.createElement('div');
-    keyEl.className = 'k';
-    keyEl.textContent = k;
-    const valEl = document.createElement('div');
-    valEl.className = 'v';
-    valEl.textContent = typeof v === 'string' ? v : String(v);
-    el.appendChild(keyEl);
-    el.appendChild(valEl);
-    grid.appendChild(el);
-  }
-}
-
-/* ---------- ユニーク度スコア（簡易） ---------- */
-/* 非厳密。おおまかなヒューリスティックで 0-100 に正規化 */
-function uniquenessScore(data){
-  let pts = 0;
-  let max = 0;
-
-  // 言語（多言語・珍しい言語は重み）
-  max += 10;
-  const langs = data.language.languages || [];
-  pts += Math.min(10, langs.length * 2);
-
-  // 画面解像度 + DPR
-  max += 15;
-  const sc = data.screen;
-  const resKey = `${sc.width}x${sc.height}@${(sc.devicePixelRatio||1).toFixed(2)}`;
-  pts += bucketScore(resKey, 15, 8); // 既定解像度からズレるほど加点（雑スコア）
-
-  // タイムゾーン
-  max += 8;
-  pts += bucketScore(data.time.timezone || '', 8, 6);
-
-  // ハード（コア数・メモリ・タッチ）
-  max += 15;
-  let hbits = 0;
-  if (data.hardware.hardwareConcurrency) hbits += Math.min(8, Math.log2(data.hardware.hardwareConcurrency+1)*3);
-  if (data.hardware.deviceMemory) hbits += Math.min(5, data.hardware.deviceMemory);
-  if (data.hardware.touchCapable) hbits += 2;
-  pts += Math.min(15, hbits);
-
-  // WebGL Renderer/Vendor
-  max += 18;
-  const glKey = `${data.webgl?.vendor||''}|${data.webgl?.renderer||''}`;
-  pts += bucketScore(glKey, 18, 12);
-
-  // Canvas/Audio ハッシュ
-  max += 24;
-  if (data.canvas?.hash) pts += 12;
-  if (data.audio?.hash) pts += 12;
-
-  // Do Not Track / Cookie
-  max += 10;
-  if (data.doNotTrack) pts += 5;
-  if (!data.cookieEnabled) pts += 5;
-
-  // Plugins
-  max += 10;
-  pts += Math.min(10, (data.plugins?.length || 0) * 2);
-
-  // ISP / Network
-  max += 8;
-  const ispKey = data.network?.isp || '';
-  pts += bucketScore(ispKey, 8, 4);
-
-  const score = Math.round((pts / max) * 100);
-  return Math.max(0, Math.min(100, score));
-}
-
-function explainScore(s){
-  if (s >= 80) return 'かなり珍しい環境（追跡回避は比較的有利だが一意性は高い）';
-  if (s >= 60) return 'やや珍しい環境（組合せ次第で識別されやすい）';
-  if (s >= 40) return '平均的〜やや一般的（他要素との組合せで識別の余地）';
-  return '比較的一般的（単独では識別困難だが組合せで識別され得る）';
-}
-
-/* 雑な“バケット一意性”スコア */
-function bucketScore(key, max, mid){
-  // 文字列長・多様度で適当に加点
-  const uniqChars = new Set(String(key)).size;
-  const len = String(key).length;
-  const rough = Math.min(max, Math.floor(len/4) + Math.floor(uniqChars/3));
-  return Math.max(mid ? Math.min(rough, max) : rough, 0);
-}
-
-/* ---------- 各種ユーティリティ ---------- */
-function guessBrowser(ua, uaData){
-  const s = (uaData || ua || '').toLowerCase();
-  if (s.includes('edg')) return 'Edge';
-  if (s.includes('chrome')) return 'Chrome';
-  if (s.includes('firefox')) return 'Firefox';
-  if (s.includes('safari')) return 'Safari';
-  return 'Unknown';
-}
-function guessOS(ua, platform){
-  const s = (ua + ' ' + platform).toLowerCase();
-  if (s.includes('win')) return 'Windows';
-  if (s.includes('mac')) return 'macOS';
-  if (s.includes('linux')) return 'Linux';
-  if (s.includes('android')) return 'Android';
-  if (s.includes('iphone') || s.includes('ipad') || s.includes('ios')) return 'iOS/iPadOS';
-  return 'Unknown';
-}
-function getPrefers(q){ return window.matchMedia && window.matchMedia(q).matches; }
-function hasLocalStorage(){
-  try{ const k='__t'; localStorage.setItem(k,'1'); localStorage.removeItem(k); return true; }catch{ return false; }
-}
-function hasSessionStorage(){
-  try{ const k='__t'; sessionStorage.setItem(k,'1'); sessionStorage.removeItem(k); return true; }catch{ return false; }
-}
-function getPlugins(){
-  try{
-    return navigator.plugins ? Array.from(navigator.plugins).map(p => ({name:p.name, filename:p.filename, description:p.description})) : [];
-  }catch{ return []; }
-}
-
-/* Canvas hash（簡易） */
-function getCanvasHash(){
-  try{
-    const canvas = document.createElement('canvas');
-    canvas.width = 240; canvas.height = 60;
-    const ctx = canvas.getContext('2d');
-    ctx.textBaseline = 'top';
-    ctx.font = '16px "Arial"';
-    ctx.fillStyle = '#f0f';
-    ctx.fillRect(0,0,240,60);
-    ctx.fillStyle = '#000';
-    ctx.fillText('Browser Fingerprint Mirror', 10, 10);
-    const data = canvas.toDataURL();
-    return { hash: djb2(data).toString(16), sampleLen: data.length };
-  }catch{ return null; }
-}
-
-/* WebGL vendor/renderer */
-function getWebGLInfo(){
-  try{
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (!gl) return null;
-    const dbgExt = gl.getExtension('WEBGL_debug_renderer_info');
-    const vendor = dbgExt ? gl.getParameter(dbgExt.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR);
-    const renderer = dbgExt ? gl.getParameter(dbgExt.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
-    return { vendor, renderer, version: gl.getParameter(gl.VERSION) };
-  }catch{ return null; }
-}
-
-/* AudioContext 指紋（簡易ハッシュ） */
-async function getAudioHash(){
-  try{
-    const ctx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100);
-    const osc = ctx.createOscillator();
-    const comp = ctx.createDynamicsCompressor();
-    osc.type = 'triangle';
-    osc.frequency.value = 440;
-    osc.connect(comp);
-    comp.connect(ctx.destination);
-    osc.start(0);
-    const buf = await ctx.startRendering();
-    let sum = 0;
-    const ch = buf.getChannelData(0);
-    for (let i=0; i<ch.length; i+=100) sum += Math.abs(ch[i]);
-    const hash = djb2(String(sum));
-    return { hash: hash.toString(16) };
-  }catch{
     return null;
   }
-}
 
-/* フォント（粗い検出：フォールバックの有無のみ） */
-async function detectFontSupport(families){
-  // 実際の“インストール済みフォント”検出は信頼困難。ここではダミー的にメトリクス差分で判定。
-  const base = 'monospace';
-  const tester = document.createElement('span');
-  tester.style.position = 'absolute';
-  tester.style.left = '-9999px';
-  tester.style.fontSize = '32px';
-  tester.textContent = 'mmmmmmmmmmlli';
-  document.body.appendChild(tester);
-
-  const baseW = measureWithFont(tester, base);
-  const result = {};
-  for(const fam of families){
-    result[fam] = measureWithFont(tester, `${fam},${base}`) !== baseW;
-  }
-  document.body.removeChild(tester);
-  return result;
-
-  function measureWithFont(el, fontFamily){
-    el.style.fontFamily = fontFamily;
-    return el.getBoundingClientRect().width.toFixed(2);
-  }
-}
-
-/* 文字列ハッシュ（djb2） */
-function djb2(str){
-  let h = 5381;
-  for (let i=0; i<str.length; i++){
-    h = ((h<<5) + h) + str.charCodeAt(i);
-    h = h & 0xffffffff;
-  }
-  return h >>> 0;
-}
-
-/* ネットワーク情報取得 */
-async function getNetworkInfo(){
-  // キャッシュから取得（5分間有効）- fetchIPInfoと共有
-  const cacheKey = 'ipinfo_cache';
-  const cacheTimeKey = 'ipinfo_cache_time';
-  const cacheExpiry = 5 * 60 * 1000; // 5分
-  const now = Date.now();
-  const cachedTime = localStorage.getItem(cacheTimeKey);
-  const cached = localStorage.getItem(cacheKey);
-
-  if (cached && cachedTime && (now - parseInt(cachedTime)) < cacheExpiry) {
-    // キャッシュから復元
-    const data = JSON.parse(cached);
-    return {
-      isp: data.isp && data.isp !== '取得失敗' && !data.isp.includes('レート制限') ? data.isp : null,
-      org: data.isp || null
-    };
-  }
-
-  try {
-    const response = await fetch('https://ipapi.co/json/');
-    if (!response.ok) {
-      if (response.status === 429) {
-        // レート制限エラー
-        return { isp: 'レート制限（しばらく待ってから再試行）', org: null };
-      }
-      return { isp: null, org: null };
+  function renderLastVisit(previous) {
+    const el = $('#fp-last');
+    const id = currentId();
+    if (!previous) {
+      el.textContent = state.lastVisit === 'unavailable' ? t('adv.lastUnavailable') : state.lastVisit === 'cleared' ? t('adv.lastCleared') : t('adv.lastNone');
+      return;
     }
-    const data = await response.json();
-    return {
-      isp: data.org || null,
-      org: data.asn || null
+    const at = new Date(previous.at).toLocaleString();
+    el.textContent = previous.id === id ? t('adv.lastSame', { at }) : t('adv.lastDiff', { at });
+  }
+
+  function saveLastVisit() {
+    const id = currentId();
+    if (!id) return;
+    if (!lsSet(LAST_VISIT_KEY, JSON.stringify({ id, at: Date.now() }))) {
+      state.lastVisit = 'unavailable';
+      $('#fp-last').textContent = t('adv.lastUnavailable');
+    }
+  }
+
+  function clearLastVisit() {
+    lsRemove(LAST_VISIT_KEY);
+    state.previousVisit = null;
+    state.lastVisit = 'cleared';
+    $('#fp-last').textContent = t('adv.lastCleared');
+    showToast(t('adv.lastCleared'), 'success', $('#clear-last'));
+  }
+
+  function protectionText(p) {
+    const base = 'prot.' + p.key + '.' + p.state;
+    if (p.key === 'pluginsFixed' && p.state === 'on') return t(base + '.' + p.detail);
+    return t(base, { detail: p.detail === null || p.detail === undefined ? t('prot.unavailable') : p.detail });
+  }
+
+  function renderProtections() {
+    const list = $('#prot-list');
+    list.textContent = '';
+    for (const p of C.detectProtections(state.data)) {
+      const li = document.createElement('li');
+      li.className = 'prot prot-' + p.state;
+      const mark = document.createElement('span');
+      mark.className = 'prot-mark';
+      mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = p.state === 'on' ? MARK_ON : p.state === 'off' ? MARK_OFF : MARK_NA;
+      const text = document.createElement('span');
+      text.textContent = protectionText(p);
+      li.appendChild(mark);
+      li.appendChild(text);
+      list.appendChild(li);
+    }
+  }
+
+  function renderAttributes() {
+    const grid = $('#adv-grid');
+    grid.textContent = '';
+    if (!state.data) return;
+    const mobile = C.isMobileHint(state.data);
+    for (const row of C.attributeRows(state.data, mobile)) {
+      const item = document.createElement('div');
+      item.className = 'item';
+      const k = document.createElement('div');
+      k.className = 'k';
+      k.textContent = t('attr.' + row.key);
+      const v = document.createElement('pre');
+      v.className = 'v';
+      v.textContent = row.key === 'network' && !row.value ? t('attr.networkNotFetched') : C.formatValue(row.value);
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const parts = [t('adv.stability') + ': ' + t('stab.' + row.stability), t(row.inId ? 'adv.inId' : 'adv.notInId')];
+      if (row.bits !== null) {
+        parts.push(t('adv.bits') + ': ' + C.formatBits(row.bits) + ' ' + t('adv.bitsUnit') + ' ' + t('adv.bitsCol', { col: t(mobile ? 'adv.colMobile' : 'adv.colPc') }));
+      }
+      meta.textContent = parts.join(' / ');
+      item.appendChild(k);
+      item.appendChild(v);
+      item.appendChild(meta);
+      grid.appendChild(item);
+    }
+  }
+
+  function renderAdvanced(previousVisit) {
+    renderId();
+    renderStability();
+    renderLastVisit(previousVisit);
+    renderProtections();
+    renderAttributes();
+  }
+
+  async function build(first) {
+    if (state.building) return null;
+    state.building = true;
+    const btn = $('#refresh-adv');
+    btn.disabled = true;
+    try {
+      const data = await COL.collect({ network: state.network });
+      state.data = data;
+      if (first || !state.firstData) state.firstData = data;
+      state.ids.push(C.fingerprintId(data).id);
+      const previous = first ? readLastVisit() : state.previousVisit;
+      if (first) state.previousVisit = previous;
+      renderAdvanced(previous);
+      if (first) saveLastVisit();
+      else showToast(t('toast.recalcDone'), 'success', btn);
+      return data;
+    } finally {
+      state.building = false;
+      btn.disabled = false;
+    }
+  }
+
+  async function copyAdvancedJSON() {
+    const btn = $('#copy-json');
+    if (!state.data) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(state.data, null, 2));
+      showToast(t('toast.copied'), 'success', btn);
+    } catch (e) {
+      showToast(t('toast.copyFailed'), 'error', btn);
+    }
+  }
+
+  /* ---------- 座学: 研究の表（計算部の STUDY_TABLE から組み立てる） ---------- */
+  function renderStudyTable() {
+    const wrap = $('#study-table');
+    if (!wrap) return;
+    wrap.textContent = '';
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    for (let i = 0; i < 6; i++) {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.textContent = t('learn.s3.col' + i);
+      headRow.appendChild(th);
+    }
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    const cols = ['p2010', 'a2016', 'all2018', 'mobile2018', 'pc2018'];
+    const fmt = (v) => (v === null ? DASH : v[0].toFixed(3) + SLASH + v[1].toFixed(3));
+    const addRow = (cells) => {
+      const tr = document.createElement('tr');
+      cells.forEach((c, i) => {
+        const el = document.createElement(i === 0 ? 'th' : 'td');
+        if (i === 0) el.scope = 'row';
+        el.textContent = c;
+        tr.appendChild(el);
+      });
+      tbody.appendChild(tr);
     };
-  } catch {
-    return { isp: null, org: null };
+    for (const r of C.STUDY_TABLE) addRow([r.attr, ...cols.map((c) => fmt(r[c]))]);
+    const m = C.STUDY_META;
+    addRow([t('learn.s3.hm'), ...cols.map((c) => m.hm[c].toFixed(3))]);
+    addRow([t('learn.s3.count'), ...cols.map((c) => m.count[c].toLocaleString('en-US'))]);
+    addRow([t('learn.s3.unique'), ...cols.map((c) => m.unique[c] + '%')]);
+    table.appendChild(tbody);
+    wrap.appendChild(table);
   }
-}
 
-/* ---------- テーマ切替 ---------- */
-function initTheme() {
-  const savedTheme = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  updateThemeIcon(savedTheme);
-}
-
-function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme') || 'dark';
-  const next = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  updateThemeIcon(next);
-}
-
-function updateThemeIcon(theme) {
-  const icon = $('.theme-icon');
-  if (icon) {
-    icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+  /* ---------- 言語 ---------- */
+  function rerenderText() {
+    applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+    renderStudyTable();
+    if (state.netStatus) setNetStatus(state.netStatus.key, state.netStatus.params);
+    if (state.data) {
+      fillSimple(state.data);
+      renderAdvanced(state.previousVisit);
+    }
   }
-}
 
-$('#theme-toggle')?.addEventListener('click', toggleTheme);
+  function toggleLanguage() {
+    const next = M.getLanguage() === 'ja' ? 'en' : 'ja';
+    I18N.use(next, document);
+    I18N.save(next);
+    rerenderText();
+  }
 
-/* 初期化 */
-window.addEventListener('DOMContentLoaded', async () => {
-  initTheme();
-  await fillSimple();
-  await buildAdvanced();
-});
+  /* ---------- 初期化 ---------- */
+  function init() {
+    I18N.use(I18N.initialLanguage(location.search, I18N.readSaved(), navigator.languages), document);
+    initTheme();
+    initTabs();
+    renderStudyTable();
+    $('#lang-toggle').addEventListener('click', toggleLanguage);
+    $('#theme-toggle').addEventListener('click', toggleTheme);
+    $('#fetch-ip').addEventListener('click', onFetchIp);
+    $('#refresh-adv').addEventListener('click', () => { build(false); });
+    $('#copy-json').addEventListener('click', copyAdvancedJSON);
+    $('#clear-last').addEventListener('click', clearLastVisit);
+    build(true).then((data) => { if (data) fillSimple(data); });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+
+  globalThis.FPApp = { state, build, selectTab, fillSimple, renderAttributes };
+})();

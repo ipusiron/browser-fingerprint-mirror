@@ -3,103 +3,113 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api4.ipify.org https://api6.ipify.org https://ipapi.co; img-src 'self' data: https:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" />
-  <meta name="referrer" content="no-referrer-when-downgrade" />
-  <title>Browser Fingerprint Mirror</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api4.ipify.org https://api6.ipify.org https://ipapi.co; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="color-scheme" content="dark light" />
+  <title data-i18n="ui.docTitle">Browser Fingerprint Mirror - ブラウザー指紋ミラー</title>
+  <link rel="icon" href="data:," />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
+  <noscript><p class="noscript" data-i18n="ui.noscript">このツールはJavaScriptで動きます。JavaScriptを有効にしてください。</p></noscript>
   <header class="header">
     <div class="header-content">
-      <div>
-        <h1>Browser Fingerprint Mirror（ブラウザー指紋ミラー）</h1>
-        <p class="subtitle">あなたのブラウザーに「映っている」指紋情報を可視化する</p>
+      <div class="header-title">
+        <h1 data-i18n="ui.title">Browser Fingerprint Mirror（ブラウザー指紋ミラー）</h1>
+        <p class="subtitle" data-i18n="ui.subtitle">あなたのブラウザーに「映っている」指紋情報を可視化する</p>
       </div>
-      <button id="theme-toggle" class="theme-toggle" aria-label="テーマ切替">
-        <span class="theme-icon">☀️</span>
-      </button>
+      <div class="header-actions">
+        <button id="lang-toggle" class="lang-toggle" type="button" aria-label="英語に切り替える" data-i18n="ui.langButton" data-i18n-attr="aria-label:ui.langLabel">EN</button>
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="ライトモードに切替" data-i18n-attr="aria-label:theme.toLight">
+          <span class="theme-icon" aria-hidden="true">☀️</span>
+        </button>
+      </div>
     </div>
   </header>
 
   <main class="container">
-    <nav class="tabs" role="tablist" aria-label="modes">
-      <button class="tab active" data-tab="simple" role="tab" aria-selected="true">シンプル</button>
-      <button class="tab" data-tab="advanced" role="tab" aria-selected="false">詳細・分析</button>
-      <button class="tab" data-tab="learn" role="tab" aria-selected="false">座学</button>
+    <nav class="tabs" role="tablist" aria-label="表示モード" data-i18n-attr="aria-label:ui.tabsLabel">
+      <button class="tab active" id="tab-btn-simple" type="button" role="tab" data-tab="simple" aria-selected="true" aria-controls="simple" data-i18n="ui.tabSimple">シンプル</button>
+      <button class="tab" id="tab-btn-advanced" type="button" role="tab" data-tab="advanced" aria-selected="false" aria-controls="advanced" tabindex="-1" data-i18n="ui.tabAdvanced">詳細・分析</button>
+      <button class="tab" id="tab-btn-learn" type="button" role="tab" data-tab="learn" aria-selected="false" aria-controls="learn" tabindex="-1" data-i18n="ui.tabLearn">座学</button>
     </nav>
 
     <!-- シンプルモード -->
-    <section id="simple" class="panel active" role="tabpanel" aria-label="simple">
+    <section id="simple" class="panel active" role="tabpanel" aria-labelledby="tab-btn-simple">
       <div class="group">
-        <h3 class="group-title">🖥️ ブラウザー・システム</h3>
+        <h2 class="group-title" data-i18n="simple.groupSystem">🖥️ ブラウザー・システム</h2>
         <div class="grid">
           <div class="card">
-            <div class="label">ブラウザー</div>
+            <div class="label" data-i18n="simple.browser">ブラウザー</div>
             <div class="value" id="simple-browser">-</div>
-            <div class="hint">User-Agent/UA-CHから推定</div>
+            <div class="hint" data-i18n="simple.browserHint">UA-CHがあればそれを、なければUser-Agentから推定</div>
           </div>
           <div class="card">
-            <div class="label">OS</div>
+            <div class="label" data-i18n="simple.os">OS</div>
             <div class="value" id="simple-os">-</div>
+            <div class="hint" id="simple-os-source"></div>
           </div>
           <div class="card">
-            <div class="label">画面解像度</div>
+            <div class="label" data-i18n="simple.res">画面解像度</div>
             <div class="value" id="simple-res">-</div>
-            <div class="hint">devicePixelRatio考慮</div>
+            <div class="hint" data-i18n="simple.resHint">devicePixelRatioを併記</div>
           </div>
         </div>
       </div>
 
       <div class="group">
-        <h3 class="group-title">🌐 ネットワーク</h3>
+        <h2 class="group-title" data-i18n="simple.groupNetwork">🌐 ネットワーク</h2>
+        <div class="net-fetch">
+          <button class="btn" id="fetch-ip" type="button" data-i18n="net.button">IPを取得する（外部APIへ接続）</button>
+          <p class="hint" data-i18n="net.note">押すとipify.org（IPv4/IPv6）とipapi.co（ISP）へ接続します。押すまで外部へは何も送りません。ipapi.coの無料枠では問い合わせたIPがログに残ります。結果は5分間ブラウザーに保存します。</p>
+          <p class="status" id="net-status" aria-live="polite"></p>
+        </div>
         <div class="grid">
           <div class="card">
-            <div class="label">IPv4アドレス</div>
+            <div class="label" data-i18n="simple.ipv4">IPv4アドレス</div>
             <div class="value" id="simple-ipv4">-</div>
-            <div class="hint">外部API経由で取得</div>
           </div>
           <div class="card">
-            <div class="label">IPv6アドレス</div>
+            <div class="label" data-i18n="simple.ipv6">IPv6アドレス</div>
             <div class="value" id="simple-ipv6">-</div>
-            <div class="hint">外部API経由で取得</div>
           </div>
           <div class="card">
-            <div class="label">ISP / プロバイダー</div>
+            <div class="label" data-i18n="simple.isp">ISP / プロバイダー</div>
             <div class="value" id="simple-isp">-</div>
-            <div class="hint">組織名またはASN情報</div>
+            <div class="hint" data-i18n="simple.ispHint">組織名とASN</div>
           </div>
         </div>
       </div>
 
       <div class="group">
-        <h3 class="group-title">🌍 地域・言語</h3>
+        <h2 class="group-title" data-i18n="simple.groupLocale">🌍 地域・言語</h2>
         <div class="grid">
           <div class="card">
-            <div class="label">言語</div>
+            <div class="label" data-i18n="simple.lang">言語</div>
             <div class="value" id="simple-lang">-</div>
           </div>
           <div class="card">
-            <div class="label">タイムゾーン</div>
+            <div class="label" data-i18n="simple.tz">タイムゾーン</div>
             <div class="value" id="simple-tz">-</div>
           </div>
         </div>
       </div>
 
       <div class="group">
-        <h3 class="group-title">⚙️ ハードウェア</h3>
+        <h2 class="group-title" data-i18n="simple.groupHardware">⚙️ ハードウェア</h2>
         <div class="grid">
           <div class="card">
-            <div class="label">タッチ/コア数/メモリ</div>
+            <div class="label" data-i18n="simple.hw">タッチ/コア数/メモリ</div>
             <div class="value" id="simple-hw">-</div>
           </div>
         </div>
       </div>
 
       <div class="group">
-        <h3 class="group-title">🔒 プライバシー設定</h3>
+        <h2 class="group-title" data-i18n="simple.groupPrivacy">🔒 プライバシー設定</h2>
         <div class="grid">
           <div class="card">
-            <div class="label">Cookie / DNT</div>
+            <div class="label" data-i18n="simple.cookieDnt">Cookie / DNT / GPC</div>
             <div class="value" id="simple-cookie-dnt">-</div>
           </div>
         </div>
@@ -107,93 +117,144 @@
     </section>
 
     <!-- 詳細・分析 -->
-    <section id="advanced" class="panel" role="tabpanel" aria-label="advanced">
+    <section id="advanced" class="panel" role="tabpanel" aria-labelledby="tab-btn-advanced">
       <div class="toolbar">
-        <button class="btn" id="refresh-adv">再取得</button>
-        <button class="btn secondary" id="copy-json">JSONコピー</button>
+        <button class="btn" id="refresh-adv" type="button" data-i18n="adv.recalc">もう一度読む</button>
+        <button class="btn secondary" id="copy-json" type="button" data-i18n="adv.copy">JSONコピー</button>
       </div>
 
-      <div class="score-wrap">
-        <div class="score-label">ユニーク度スコア</div>
-        <div class="score" id="unique-score">--</div>
-        <div class="score-desc" id="score-desc">環境の珍しさを0〜100で推定（ローカル推定）</div>
+      <div class="id-wrap">
+        <div class="id-label" data-i18n="adv.idLabel">指紋ID</div>
+        <div class="id" id="fp-id">--</div>
+        <p class="id-desc" data-i18n="adv.idDesc">安定な属性（IPと時刻を除く）を正規化してSHA-256にした先頭16桁。同じ環境なら再読み込みでもシークレットモードでも同じ値になります。</p>
+        <dl class="id-meta">
+          <div class="id-meta-row">
+            <dt data-i18n="adv.stabilityLabel">もう一度読んだ結果</dt>
+            <dd id="fp-stability" aria-live="polite">—</dd>
+          </div>
+          <div class="id-meta-row">
+            <dt data-i18n="adv.lastLabel">前回の訪問</dt>
+            <dd id="fp-last" aria-live="polite">—</dd>
+            <dd class="id-meta-action"><button class="btn secondary small" id="clear-last" type="button" data-i18n="adv.clearLast">前回の記録を消す</button></dd>
+          </div>
+        </dl>
       </div>
 
-      <div class="adv-grid" id="adv-grid">
-        <!-- 動的に項目カードを挿入 -->
-      </div>
+      <section class="prot-wrap">
+        <h2 class="section-title" data-i18n="adv.protLabel">保護の検出</h2>
+        <ul class="prot-list" id="prot-list" aria-live="polite"></ul>
+        <p class="hint" data-i18n="adv.protHint">観測できた事実だけを並べています。ここに出ないものは「検出できなかった」であって「保護がない」ではありません。</p>
+      </section>
+
+      <section class="attr-wrap">
+        <h2 class="section-title" data-i18n="adv.attrLabel">属性の一覧</h2>
+        <p class="hint" data-i18n="adv.attrHint">「研究での識別力」は、2018年の大規模調査（約207万件）でその属性が持っていた情報量（bits）です。あなたの値の珍しさではなく、属性の種類ごとの参考値です。</p>
+        <div class="adv-grid" id="adv-grid"></div>
+      </section>
 
       <details class="privacy">
-        <summary>プライバシー / 免責</summary>
+        <summary data-i18n="privacy.summary">プライバシー / 免責</summary>
         <ul>
-          <li>このページはクライアントサイドのみで動作し、データは外部送信しません。</li>
-          <li>ユニーク度スコアは単純モデルの推定であり、厳密な統計に基づくものではありません。</li>
-          <li>Canvas/WebGL等の「指紋化し得る」値は教育目的で表示しています。</li>
+          <li data-i18n="privacy.line1">収集した値はこのページの中で表示するだけで、サーバーへ送信しません。</li>
+          <li data-i18n="privacy.line2">例外は「IPを取得する」を押したときだけで、ipify.orgとipapi.coに接続します（接続先にはあなたのIPアドレスが渡ります）。</li>
+          <li data-i18n="privacy.line3">ブラウザーに保存するのは、テーマと言語の選択、前回の指紋ID、5分間のIP情報だけです。</li>
+          <li data-i18n="privacy.line4">Canvas/WebGL/Audioの値は教育のために表示しています。「研究での識別力」は研究データの参考値で、あなたの珍しさではありません。</li>
         </ul>
       </details>
     </section>
 
     <!-- 座学 -->
-    <section id="learn" class="panel" role="tabpanel" aria-label="learn">
+    <section id="learn" class="panel" role="tabpanel" aria-labelledby="tab-btn-learn">
       <div class="learn-content">
         <details class="learn-accordion" open>
-          <summary class="learn-summary">📚 ブラウザー指紋（Browser Fingerprinting）とは</summary>
+          <summary class="learn-summary" data-i18n="learn.s1.title">📚 ブラウザー指紋とは</summary>
           <div class="learn-body">
-            <p>
-              ブラウザー指紋とは、ブラウザーが公開する様々な環境情報（User-Agent、画面解像度、言語設定、タイムゾーン、インストールされたフォントやプラグイン、Canvas/WebGLの描画特性など）を組み合わせて、個々のユーザーを識別する技術です。
-            </p>
-            <p>
-              Cookie やローカルストレージを使わずとも、これらの情報の組み合わせが十分にユニークであれば、サイトをまたいでユーザーを追跡することが可能になります。
-            </p>
+            <p data-i18n="learn.s1.p1">ブラウザー指紋（Browser Fingerprinting）とは、ブラウザーが公開する環境情報（User-Agent・画面解像度・言語・タイムゾーン・ハードウェア・Canvas/WebGL/Audioの描画や処理の癖など）を組み合わせて、Cookieを使わずに「同じブラウザー環境」を識別する技術です。</p>
+            <p data-i18n="learn.s1.p2">Cookieは消せますが、端末やOSの情報は消せません。シークレットモードでも変わりません。組み合わせが十分に珍しければ、サイトをまたいで同じ人として追跡できます。</p>
+            <p data-i18n="learn.s1.p3">このツールは、その仕組みを自分の環境で確かめるための鏡です。集めた値はページの中で表示するだけで、サーバーへは送りません。</p>
           </div>
         </details>
 
         <details class="learn-accordion">
-          <summary class="learn-summary">🔍 なぜ指紋情報が問題なのか</summary>
+          <summary class="learn-summary" data-i18n="learn.s2.title">🧮 指紋IDと安定性</summary>
           <div class="learn-body">
+            <p data-i18n="learn.s2.p1">「詳細・分析」の指紋IDは、安定な属性（IPと時刻を除く19項目）を正規化してSHA-256にした先頭16桁です。同じ環境なら、再読み込みでもシークレットモードでも同じ値になります。</p>
+            <p data-i18n="learn.s2.p2">追跡に使えるかどうかは「珍しさ」だけでなく「安定しているか」で決まります。再読み込みのたびに変わる値は、どんなに珍しくても追跡には使えません。属性の一覧では、安定性を次の5つに分けています。</p>
             <ul>
-              <li><strong>ユーザーの同意なしに追跡される</strong>: Cookie は削除できますが、ブラウザー環境は簡単には変えられません</li>
-              <li><strong>匿名モードでも無効</strong>: シークレットモードやプライベートブラウジングでも、ハードウェアやシステム情報は隠せません</li>
-              <li><strong>複数サイト間での追跡</strong>: 異なるサイトでも同じ指紋情報で「同一人物」と判定される可能性があります</li>
-              <li><strong>プロファイリングのリスク</strong>: 閲覧履歴と組み合わせることで、興味関心や行動パターンが分析されます</li>
+              <li data-i18n="learn.s2.li1">端末・OSで決まる（変えにくい）＝画面・ハードウェア・navigator.platform・WebGL・Canvas・Audio</li>
+              <li data-i18n="learn.s2.li2">設定で決まる（変えられる）＝言語・ロケール・タイムゾーン・ストレージの可否・Cookie・DNT・GPC・メディアクエリ</li>
+              <li data-i18n="learn.s2.li3">更新で変わる＝User-Agent・UA Client Hints</li>
+              <li data-i18n="learn.s2.li4">仕様で固定（識別力なし）＝プラグイン一覧</li>
+              <li data-i18n="learn.s2.li5">接続ごとに変わる＝IPアドレスとISP（指紋IDには含めない）</li>
             </ul>
+            <p data-i18n="learn.s2.p3">試してみましょう。「もう一度読む」を押す、シークレットモードで開く、別のブラウザーで開く、VPNを使う。それぞれで何が変わるかを「属性の一覧」で見比べると、指紋の性質が見えてきます。</p>
           </div>
         </details>
 
         <details class="learn-accordion">
-          <summary class="learn-summary">🛡️ 対策方法</summary>
+          <summary class="learn-summary" data-i18n="learn.s3.title">📊 研究で測られた属性ごとの識別力</summary>
           <div class="learn-body">
+            <p data-i18n="learn.s3.p1">属性ごとの識別力は、研究者が大量の指紋を集めて測ってきました。表は3つの研究のShannonエントロピー（bits）と、正規化した値（すべての指紋が一意だったときの最大値H_M＝log2（指紋の数）で割った値）です。1 bitは候補を半分に絞る情報量で、20 bitあれば約100万通りを区別できます。</p>
+            <div class="table-wrap" id="study-table"></div>
             <ul>
-              <li><strong>プライバシー重視ブラウザーの利用</strong>: Tor Browser、Brave などは指紋対策機能を持っています</li>
-              <li><strong>拡張機能の活用</strong>: Canvas Blocker、Privacy Badger などで一部の指紋情報を隠蔽できます</li>
-              <li><strong>JavaScript の制限</strong>: 多くの指紋情報は JavaScript 経由で取得されるため、制限することで対策できます（ただし利便性は低下）</li>
-              <li><strong>一般的な環境を使う</strong>: ユニーク度が低い環境（主流のOS、ブラウザー、解像度）を使うと、他のユーザーに紛れやすくなります</li>
+              <li data-i18n="learn.s3.li1">値は母集団で変わる。2018年のタイムゾーンが0.164 bitと小さいのはフランスのサイトの訪問者だからで、日本の利用者だけを集めても同じことが起きる</li>
+              <li data-i18n="learn.s3.li2">2018年の値が今のブラウザーに当てはまらない属性がある。プラグイン一覧は現在の仕様で固定され（識別力はほぼ0）、ChromeのUser-Agentは削減された</li>
+              <li data-i18n="learn.s3.li3">一意な指紋の割合が83.6%→89.4%→33.6%と下がったのは、技術の進歩というより対象の違い（プライバシーに関心のある訪問者か、一般の訪問者か）だというのが2018年の論文の主張である</li>
+              <li data-i18n="learn.s3.li4">本ツールはこれらの値を「あなたの珍しさ」として足し合わせない。属性の種類ごとの参考値として添えるだけである</li>
             </ul>
+            <p data-i18n="learn.s3.p2">出典は参考リンクの節にある3本の論文です（Eckersley 2010＝Panopticlick 470,161件、Laperdrix・Rudametkin・Baudry 2016＝AmIUnique 118,934件、Gómez-Boix・Laperdrix・Baudry 2018＝2,067,942件）。</p>
           </div>
         </details>
 
         <details class="learn-accordion">
-          <summary class="learn-summary">⚖️ 指紋情報の限界</summary>
+          <summary class="learn-summary" data-i18n="learn.s4.title">🛡️ ブラウザーの現状と対策</summary>
           <div class="learn-body">
-            <p>
-              ブラウザー指紋だけで「住所」や「本名」などの個人情報が直接漏洩するわけではありません。あくまで「同じブラウザー環境を使っている人物」として識別されるだけです。
-            </p>
-            <p>
-              ただし、ログイン情報や購入履歴、位置情報などと組み合わせることで、より詳細なプロファイリングが可能になります。
-            </p>
+            <p data-i18n="learn.s4.p1">ブラウザーは指紋を減らす方向に変わってきました。本ツールの「保護の検出」が見ているのは、次のような現状です。</p>
+            <ul>
+              <li data-i18n="learn.s4.li1">User-Agentの削減（Chromium系）＝ブランドと主要バージョン、モバイルかどうか、OS名だけを残し、OSの版やビルド番号を固定する。詳しい値はUA Client Hintsでサーバーが要求したときだけ送られる</li>
+              <li data-i18n="learn.s4.li2">navigator.pluginsの固定＝仕様により、PDFを表示できるブラウザーは5件の固定一覧、できなければ空を返す。識別には使えない</li>
+              <li data-i18n="learn.s4.li3">navigator.deviceMemoryの丸め＝2のべき乗に丸めた値だけを返し、FirefoxとSafariは実装していない</li>
+              <li data-i18n="learn.s4.li4">Firefoxのprivacy.resistFingerprinting＝タイムゾーンをUTCに・devicePixelRatioを2に・CPUコア数を2に・WebGLのvendorとrendererをMozillaにし、Canvasの読み出しを変える（本ツールで実測）</li>
+              <li data-i18n="learn.s4.li5">Braveのfarbling＝セッションとサイトごとに違う乱数をCanvas・WebGL・Audio・プラグインなどの値に混ぜ、サイトをまたいで同じ値にならないようにする</li>
+              <li data-i18n="learn.s4.li6">Global Privacy Control＝「売らない・共有しない」の意思表示をSec-GPCヘッダーとnavigator.globalPrivacyControlで伝える新しい仕組み。対応ブラウザーはまだ限られる</li>
+            </ul>
+            <p data-i18n="learn.s4.p2">利用者ができることもあります。</p>
+            <ul>
+              <li data-i18n="learn.s4.li7">Tor BrowserやBraveのように、指紋対策を標準で持つブラウザーを使う</li>
+              <li data-i18n="learn.s4.li8">Firefoxならabout:configでprivacy.resistFingerprintingを有効にする（サイトによっては表示が崩れる）</li>
+              <li data-i18n="learn.s4.li9">Canvas Blockerのような拡張機能で一部の値を隠す</li>
+              <li data-i18n="learn.s4.li10">JavaScriptを制限する（多くの指紋情報はJavaScript経由で取得される。利便性は下がる）</li>
+              <li data-i18n="learn.s4.li11">主流のOS・ブラウザー・解像度を使い、ほかの利用者に紛れる</li>
+            </ul>
+            <p data-i18n="learn.s4.p3">「保護の検出」は、これらが効いているかを観測できた範囲で示します。出ないものは「検出できなかった」であって「保護がない」ではありません。</p>
           </div>
         </details>
 
         <details class="learn-accordion">
-          <summary class="learn-summary">📖 参考リンク</summary>
+          <summary class="learn-summary" data-i18n="learn.s5.title">⚖️ 限界</summary>
+          <div class="learn-body">
+            <p data-i18n="learn.s5.p1">ブラウザー指紋だけで住所や本名が直接わかるわけではありません。「同じブラウザー環境を使っている人」として識別されるだけです。ただし、ログイン情報や購入履歴、位置情報と結びつくと、詳しいプロファイリングにつながります。</p>
+            <p data-i18n="learn.s5.p2">本ツールは母集団（ほかの人の指紋）を持たないので、「あなたが何人に1人か」は出せません。母集団と比べたいときは、Cover Your TracksやAmIUniqueのように指紋をサーバーへ送って比べるツールを使ってください。</p>
+            <p data-i18n="learn.s5.p3">保護の検出は観測できた事実だけです。検出されないことは、保護がないことを意味しません。</p>
+          </div>
+        </details>
+
+        <details class="learn-accordion">
+          <summary class="learn-summary" data-i18n="learn.s6.title">📖 参考リンク</summary>
           <div class="learn-body">
             <ul>
-              <li><a href="https://www.ugtop.com/spill.shtml" target="_blank" rel="noopener noreferrer">確認くん</a> - ブラウザー・接続情報の総合確認</li>
-              <li><a href="https://env.b4iine.net/isp.php" target="_blank" rel="noopener noreferrer">プロバイダー確認君</a> - IPアドレスとISP情報を確認</li>
-              <li><a href="https://amiunique.org/" target="_blank" rel="noopener noreferrer">Am I Unique?</a> - ブラウザー指紋のユニーク度を測定</li>
-              <li><a href="https://coveryourtracks.eff.org/" target="_blank" rel="noopener noreferrer">Cover Your Tracks (EFF)</a> - 指紋追跡への耐性をテスト</li>
-              <li><a href="https://browserleaks.com/" target="_blank" rel="noopener noreferrer">BrowserLeaks</a> - ブラウザーから漏洩する情報の総合チェック</li>
-              <li><a href="https://www.torproject.org/" target="_blank" rel="noopener noreferrer">Tor Project</a> - 匿名性重視のブラウザー</li>
+              <li><a href="https://www.ugtop.com/spill.shtml" target="_blank" rel="noopener noreferrer" data-i18n="learn.s6.a1">確認くん</a><span data-i18n="learn.s6.li1"> - ブラウザー・接続情報の総合確認</span></li>
+              <li><a href="https://env.b4iine.net/isp.php" target="_blank" rel="noopener noreferrer" data-i18n="learn.s6.a2">プロバイダー確認君</a><span data-i18n="learn.s6.li2"> - IPアドレスとISP情報を確認</span></li>
+              <li><a href="https://amiunique.org/" target="_blank" rel="noopener noreferrer">Am I Unique?</a><span data-i18n="learn.s6.li3"> - 指紋を母集団と比べる（INRIA）</span></li>
+              <li><a href="https://coveryourtracks.eff.org/" target="_blank" rel="noopener noreferrer">Cover Your Tracks (EFF)</a><span data-i18n="learn.s6.li4"> - 母集団との比較とトラッカー遮断のテスト</span></li>
+              <li><a href="https://browserleaks.com/" target="_blank" rel="noopener noreferrer">BrowserLeaks</a><span data-i18n="learn.s6.li5"> - APIごとの深掘り</span></li>
+              <li><a href="https://www.torproject.org/" target="_blank" rel="noopener noreferrer">Tor Project</a><span data-i18n="learn.s6.li6"> - 匿名性重視のブラウザー</span></li>
+              <li><a href="https://coveryourtracks.eff.org/static/browser-uniqueness.pdf" target="_blank" rel="noopener noreferrer">Eckersley 2010 "How Unique Is Your Web Browser?"</a><span data-i18n="learn.s6.li7"> - Panopticlickの論文（PDF）</span></li>
+              <li><a href="https://hal.science/hal-01285470" target="_blank" rel="noopener noreferrer" data-i18n="learn.s6.a8">Laperdrixほか（2016）"Beauty and the Beast"</a><span data-i18n="learn.s6.li8"> - AmIUniqueの論文（HAL）</span></li>
+              <li><a href="https://hal.inria.fr/hal-01718234" target="_blank" rel="noopener noreferrer" data-i18n="learn.s6.a9">Gómez-Boixほか（2018）"Hiding in the Crowd"</a><span data-i18n="learn.s6.li9"> - 約207万件の指紋の分析（HAL）</span></li>
+              <li><a href="https://privacysandbox.google.com/protections/user-agent" target="_blank" rel="noopener noreferrer">User-Agent reduction (Privacy Sandbox)</a><span data-i18n="learn.s6.li10"> - Chromeの削減されたUser-Agentの説明</span></li>
+              <li><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/" target="_blank" rel="noopener noreferrer">Brave "Fingerprinting defenses 2.0"</a><span data-i18n="learn.s6.li11"> - farblingの説明</span></li>
+              <li><a href="https://github.com/ipusiron/browser-permission-radar" target="_blank" rel="noopener noreferrer">Browser Permission Radar (Day092)</a><span data-i18n="learn.s6.li12"> - ブラウザーの権限の露出を見るツール</span></li>
             </ul>
           </div>
         </details>
@@ -203,12 +264,14 @@
 
   <footer>
     <div class="footer">
-      🔗 GitHubリポジトリはこちら（
-      <a href="https://github.com/ipusiron/browser-fingerprint-mirror" target="_blank" rel="noopener noreferrer">ipusiron/browser-fingerprint-mirror</a>
-      ）
+      <span data-i18n="ui.footerPre">🔗 GitHubリポジトリーはこちら（</span><a href="https://github.com/ipusiron/browser-fingerprint-mirror" target="_blank" rel="noopener noreferrer">ipusiron/browser-fingerprint-mirror</a><span data-i18n="ui.footerPost">）</span>
     </div>
   </footer>
 
+  <script src="./js/fp-core.js"></script>
+  <script src="./js/fp-collect.js"></script>
+  <script src="./js/messages.js"></script>
+  <script src="./js/i18n.js"></script>
   <script src="./script.js"></script>
 </body>
 </html>

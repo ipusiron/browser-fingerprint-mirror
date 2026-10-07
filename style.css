@@ -1,17 +1,23 @@
 /* ==========================================================================
    CSS Variables - ダークモード/ライトモード対応
+   文字と背景の組は test/contrast.test.js で 4.5:1 以上を検証する
    ========================================================================== */
 :root{
-  /* ダークモード（デフォルト） */
+  /* ダークモード（既定。保存がなければ OS の設定に従う） */
   --bg:#0b0c10;              /* 背景色 */
   --fg:#e5e7eb;              /* テキスト色 */
   --muted:#9aa0a6;           /* 補助テキスト色 */
   --card:#111217;            /* カード背景色 */
-  --accent:#7dd3fc;          /* アクセントカラー（リンク等） */
-  --accent-weak:#38bdf8;     /* アクセントカラー（ボタン等） */
+  --accent:#7dd3fc;          /* アクセント（リンク・指紋ID・枠線） */
+  --accent-weak:#38bdf8;     /* 主ボタン・アクティブなタブの背景 */
+  --accent-hover:#7dd3fc;    /* 主ボタンのホバー時の背景（文字は --on-accent のまま読める色） */
+  --on-accent:#0b0c10;       /* 主ボタン・アクティブなタブの文字 */
   --warn:#f59e0b;            /* 警告色 */
+  --on-warn:#0b0c10;         /* 警告色の面の上の文字 */
+  --ok:#10b981;              /* 成功色 */
   --emph:#1f2937;            /* 強調背景色 */
   --border:#1f2937;          /* ボーダー色 */
+  --toast-max:300px;         /* トーストの最大幅（script.js の定数と同じ値） */
 }
 
 [data-theme="light"]{
@@ -20,9 +26,13 @@
   --fg:#1a1a1a;
   --muted:#666666;
   --card:#ffffff;
-  --accent:#0284c7;
+  --accent:#0369a1;
   --accent-weak:#0ea5e9;
-  --warn:#d97706;
+  --accent-hover:#38bdf8;
+  --on-accent:#1a1a1a;
+  --warn:#b45309;
+  --on-warn:#ffffff;
+  --ok:#047857;
   --emph:#e5e5e5;
   --border:#d4d4d4;
 }
@@ -31,19 +41,39 @@
    Base Styles
    ========================================================================== */
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";}
+body{min-height:100dvh}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+[hidden]{display:none !important}
+.noscript{margin:0;padding:12px 16px;background:var(--warn);color:var(--on-warn);text-align:center}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
 
 /* ==========================================================================
-   Header - ヘッダー（タイトル・テーマ切替ボタン）
+   Header - ヘッダー（タイトルは中央、ボタンは右端。狭い画面では縦に並ぶ）
    ========================================================================== */
 .header{padding:24px 16px 8px;border-bottom:1px solid var(--border);}
-.header-content{display:flex;justify-content:space-between;align-items:center;max-width:1100px;margin:0 auto;gap:16px;flex-wrap:wrap}
-@media (max-width:600px){.header-content{justify-content:center;text-align:center}}
-.header h1{margin:0;font-size:28px;letter-spacing:.5px}
+.header-content{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;max-width:1100px;margin:0 auto;gap:16px}
+.header-title{grid-column:2;text-align:center;min-width:0}
+.header-actions{grid-column:3;justify-self:end;display:flex;gap:8px}
+.header h1{margin:0;font-size:28px;letter-spacing:.5px;overflow-wrap:anywhere}
 .subtitle{margin:6px 0 0;color:var(--muted);font-size:14px}
+@media (max-width:768px){
+  .header-content{grid-template-columns:1fr}
+  .header-title{grid-column:1}
+  .header-actions{grid-column:1;justify-self:center}
+  .header h1{font-size:22px}
+}
+
+/* 言語切替ボタン */
+.lang-toggle{background:var(--card);border:1px solid var(--border);color:var(--fg);padding:10px 14px;min-width:44px;min-height:44px;border-radius:10px;cursor:pointer;font:inherit;font-size:14px;font-weight:600}
+.lang-toggle:hover{background:var(--emph)}
 
 /* テーマ切替ボタン */
-.theme-toggle{background:var(--card);border:1px solid var(--border);color:var(--fg);padding:10px 14px;border-radius:10px;cursor:pointer;font-size:20px;transition:transform 0.2s}
+.theme-toggle{background:var(--card);border:1px solid var(--border);color:var(--fg);padding:10px 14px;min-width:44px;min-height:44px;border-radius:10px;cursor:pointer;font-size:20px;transition:transform 0.2s}
 .theme-toggle:hover{transform:scale(1.05)}
 .theme-toggle:active{transform:scale(0.95)}
 
@@ -55,10 +85,10 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:ui
 /* ==========================================================================
    Tabs - タブナビゲーション
    ========================================================================== */
-.tabs{display:flex;gap:8px;justify-content:center;margin:12px 0 16px}
-.tab{padding:10px 14px;background:var(--card);border:1px solid var(--border);color:var(--fg);cursor:pointer;border-radius:8px;transition:all 0.2s;position:relative}
+.tabs{display:flex;gap:8px;justify-content:center;margin:12px 0 16px;flex-wrap:wrap}
+.tab{padding:10px 14px;min-height:44px;background:var(--card);border:1px solid var(--border);color:var(--fg);cursor:pointer;border-radius:8px;transition:background 0.2s,transform 0.2s;position:relative;font:inherit;font-size:14px}
 .tab:hover{background:var(--emph);transform:translateY(-2px)}
-.tab.active{background:var(--accent-weak);color:#fff;border-color:var(--accent-weak);box-shadow:0 2px 8px rgba(56,189,248,0.3)}
+.tab.active{background:var(--accent-weak);color:var(--on-accent);border-color:var(--accent-weak);box-shadow:0 2px 8px rgba(56,189,248,0.3)}
 .tab.active::after{content:'';position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);width:50%;height:2px;background:var(--accent)}
 
 .panel{display:none;animation:fadeIn 0.3s ease-in}
@@ -67,44 +97,75 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:ui
 
 .group{margin-bottom:32px}
 .group:last-child{margin-bottom:0}
-.group-title{font-size:18px;font-weight:600;margin:0 0 12px 0;color:var(--fg);display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+.group-title,.section-title{font-size:18px;font-weight:600;margin:0 0 12px 0;color:var(--fg);display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+.section-title{margin-top:24px}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;min-height:140px;display:flex;flex-direction:column;transition:transform 0.2s,box-shadow 0.2s}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;min-height:120px;display:flex;flex-direction:column;transition:transform 0.2s,box-shadow 0.2s}
 .card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.1)}
-.card .label{color:var(--muted);font-size:12px;margin-bottom:6px}
-.card .value{font-size:18px;word-break:break-all}
-.card .value.small{font-size:14px;line-height:1.5}
-.card .hint{margin-top:6px;color:var(--muted);font-size:12px}
-.card.emphasis{outline:1px dashed var(--warn);outline-offset:4px}
+.card .label{color:var(--muted);font-size:13px;margin-bottom:6px}
+.card .value{font-size:18px;word-break:break-all;overflow-wrap:anywhere}
+.card .hint{margin-top:6px;color:var(--muted);font-size:13px}
+.hint{color:var(--muted);font-size:14px;line-height:1.6;margin:8px 0}
+.status{color:var(--fg);font-size:14px;margin:4px 0 0;min-height:1.4em}
 
-.mirror-note{margin-top:10px;color:var(--muted);text-align:center}
+.net-fetch{margin-bottom:12px}
+.net-fetch .hint{margin-top:8px}
 
-.btn{background:var(--accent-weak);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600;transition:all 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
-.btn:hover{background:var(--accent);transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,0.15)}
+.btn{background:var(--accent-weak);color:var(--on-accent);border:none;padding:10px 14px;min-height:44px;border-radius:10px;cursor:pointer;font:inherit;font-size:14px;font-weight:600;transition:background 0.2s,transform 0.2s,box-shadow 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+.btn:hover{background:var(--accent-hover);transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,0.15)}
+.btn:disabled{opacity:0.6;cursor:default;transform:none}
 .btn.secondary{background:var(--card);color:var(--fg);border:1px solid var(--border)}
 .btn.secondary:hover{background:var(--emph);border-color:var(--accent)}
+.btn.small{min-height:36px;padding:6px 10px;font-size:13px;font-weight:500}
 .btn:active{transform:translateY(1px)}
 
-.toolbar{display:flex;gap:8px;margin-bottom:12px}
-.score-wrap{background:var(--card);border:2px solid var(--accent);border-radius:16px;padding:20px;margin:6px 0 20px;box-shadow:0 4px 12px rgba(56,189,248,0.15)}
-.score-label{color:var(--muted);font-size:14px;margin-bottom:8px}
-.score{font-size:48px;font-weight:800;background:linear-gradient(45deg,var(--accent),#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:8px}
-.score-desc{color:var(--muted);font-size:14px}
+.toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 
-.adv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-.adv-grid .item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
-.adv-grid .k{color:var(--muted);font-size:12px;margin-bottom:6px}
-.adv-grid .v{font-size:14px;white-space:pre-wrap;word-break:break-all}
+/* 指紋ID のカード */
+.id-wrap{background:var(--card);border:2px solid var(--accent);border-radius:16px;padding:20px;margin:6px 0 20px;box-shadow:0 4px 12px rgba(56,189,248,0.15)}
+.id-label{color:var(--muted);font-size:14px;margin-bottom:8px}
+.id{font-size:36px;font-weight:800;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;color:var(--accent);margin-bottom:8px;overflow-wrap:anywhere;letter-spacing:.04em}
+.id-desc{color:var(--muted);font-size:14px;line-height:1.6;margin:0 0 12px}
+.id-meta{margin:0;display:grid;gap:8px}
+.id-meta-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px 12px;align-items:center;padding-top:8px;border-top:1px solid var(--border)}
+.id-meta-row dt{color:var(--muted);font-size:13px;white-space:nowrap}
+.id-meta-row dd{margin:0;font-size:14px;line-height:1.5;min-width:0;overflow-wrap:anywhere}
+.id-meta-row .id-meta-action{justify-self:end}
+@media (max-width:600px){
+  .id{font-size:26px}
+  .id-meta-row{grid-template-columns:1fr}
+  .id-meta-row .id-meta-action{justify-self:start}
+}
+@media (max-width:360px){
+  .id-wrap{padding:16px}
+  .id{font-size:22px;letter-spacing:.02em}
+}
 
-.privacy{margin-top:10px;color:var(--muted)}
+/* 保護の検出 */
+.prot-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.prot{display:grid;grid-template-columns:1.2em 1fr;gap:8px;align-items:start;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.5}
+.prot-mark{color:var(--muted);text-align:center}
+.prot-on .prot-mark{color:var(--ok)}
 
+/* 属性の一覧 */
+.adv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:12px}
+.adv-grid .item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;min-width:0;display:flex;flex-direction:column}
+.adv-grid .k{color:var(--muted);font-size:13px;margin-bottom:6px}
+.adv-grid .v{font-size:14px;white-space:pre-wrap;word-break:break-all;overflow-wrap:anywhere;margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;flex:1}
+.adv-grid .meta{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);color:var(--muted);font-size:13px;line-height:1.5}
+
+.privacy{margin-top:16px;color:var(--muted)}
+.privacy summary{cursor:pointer}
+.privacy li{margin:6px 0;line-height:1.6}
+
+/* 座学 */
 .learn-content{max-width:800px;margin:0 auto}
 .learn-accordion{margin-bottom:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .learn-accordion:last-child{margin-bottom:0}
 .learn-summary{padding:16px 20px;font-size:18px;font-weight:600;color:var(--fg);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;transition:background 0.2s}
 .learn-summary::-webkit-details-marker{display:none}
-.learn-summary::before{content:'▶';margin-right:12px;transition:transform 0.3s;display:inline-block;color:var(--accent)}
+.learn-summary::before{content:'\25B6';margin-right:12px;transition:transform 0.3s;display:inline-block;color:var(--accent)}
 .learn-accordion[open] .learn-summary::before{transform:rotate(90deg)}
 .learn-summary:hover{background:var(--emph)}
 .learn-body{padding:0 20px 20px 20px;animation:slideDown 0.3s ease-out}
@@ -112,21 +173,25 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:ui
 .learn-body ul{line-height:1.8;margin:12px 0;padding-left:24px;color:var(--fg)}
 .learn-body li{margin:8px 0}
 .learn-body a{color:var(--accent);text-decoration:none;transition:color 0.2s}
-.learn-body a:hover{color:var(--accent-weak);text-decoration:underline}
+.learn-body a:hover{text-decoration:underline}
+.learn-body table{border-collapse:collapse;width:100%;font-size:14px}
+.learn-body th,.learn-body td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top}
+.learn-body th{background:var(--emph)}
+.table-wrap{overflow-x:auto;max-width:100%}
 @keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 
 footer{border-top:1px solid var(--border);padding-top:24px}
-.footer{margin:24px 0;text-align:center;color:var(--muted)}
+.footer{margin:24px 0;text-align:center;color:var(--muted);padding:0 16px;overflow-wrap:anywhere}
 .footer a{color:var(--accent);text-decoration:none;transition:color 0.2s}
-.footer a:hover{color:var(--accent-weak);text-decoration:underline}
+.footer a:hover{text-decoration:underline}
 
-.toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--accent);border-radius:12px;padding:12px 16px;box-shadow:0 4px 12px rgba(0,0,0,0.2);color:var(--fg);font-size:14px;z-index:1000;max-width:300px;width:max-content}
+/* トースト */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--accent);border-radius:12px;padding:12px 16px;box-shadow:0 4px 12px rgba(0,0,0,0.2);color:var(--fg);font-size:14px;z-index:1000;max-width:var(--toast-max);width:max-content}
 .toast:not(.toast-anchored){animation:slideIn 0.3s ease-out}
-/* Anchored to a UI element: keep readable width and wrap text */
-.toast.toast-anchored{animation:fadeInDown 0.3s ease-out;width:auto;max-width:300px;white-space:normal;word-break:break-word;overflow-wrap:anywhere;bottom:auto;right:auto}
-.toast.success{border-color:#10b981;background:linear-gradient(135deg,var(--card),rgba(16,185,129,0.1))}
+.toast.toast-anchored{animation:fadeInDown 0.3s ease-out;width:auto;max-width:var(--toast-max);white-space:normal;word-break:break-word;overflow-wrap:anywhere;bottom:auto;right:auto}
+.toast.success{border-color:var(--ok)}
+.toast.error{border-color:var(--warn)}
 .toast.hide{animation:fadeOut 0.3s ease-in forwards}
 @keyframes slideIn{from{transform:translateX(400px);opacity:0}to{transform:translateX(0);opacity:1}}
-@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(400px);opacity:0}}
 @keyframes fadeInDown{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes fadeOut{from{opacity:1}to{opacity:0}}
