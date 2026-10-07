@@ -39,7 +39,7 @@ const PAIRS = [
   ['muted', 'bg'], ['muted', 'card'],
   ['on-accent', 'accent-weak'], ['on-accent', 'accent-hover'],
   ['accent', 'bg'], ['accent', 'card'],
-  ['ok', 'card'],
+  ['ok', 'card'], ['warn', 'card'],
 ];
 
 const dark = readVars(':root');
@@ -96,6 +96,13 @@ test('属性の一覧とカードの grid は幅 320px でも枠からはみ出�
   assert.match(css, /\.adv-grid\{[^}]*minmax\(min\(300px,100%\),1fr\)/);
   assert.match(css, /\.grid\{[^}]*minmax\(min\(240px,100%\),1fr\)/);
   assert.match(css, /\.adv-grid \.item\{[^}]*min-width:0/);
+});
+
+test('比較の入力欄は16px以上。比較の行は狭い画面で1列', () => {
+  assert.match(css, /\.cmp-text\{[^}]*font-size:16px/);
+  assert.match(css, /\.cmp-row\{[^}]*grid-template-columns:1fr 1fr/);
+  assert.match(css, /@media \(max-width:600px\)\{\s*\.cmp-row\{grid-template-columns:1fr\}/);
+  assert.match(css, /\.cmp-row\.diff\{border-color:var\(--warn\)\}/);
 });
 
 test('トーストの最大幅は CSS 変数（script.js の定数と同じ 300px）', () => {

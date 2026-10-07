@@ -381,6 +381,73 @@
   }
 
   /* ======================================================================
+     スナップショットの読み込み（信用しない JSON を、表示に使える形に絞る）と比較
+     ====================================================================== */
+  const SNAPSHOT_MAX_BYTES = 256 * 1024;
+  const SNAP_MAX_STRING = 2000;
+  const SNAP_MAX_ITEMS = 200;
+  const SNAP_MAX_KEYS = 64;
+  const SNAP_MAX_DEPTH = 5;
+  const CONTROL_RE = new RegExp('[' + String.fromCharCode(0) + '-' + String.fromCharCode(8) + String.fromCharCode(11) + String.fromCharCode(12)
+    + String.fromCharCode(14) + '-' + String.fromCharCode(31) + String.fromCharCode(127) + ']', 'g');
+
+  // 型を文字列・有限の数・真偽値・null・配列・プレーンなオブジェクトに絞り、長さと深さを切る
+  function sanitizeValue(value, depth) {
+    const d = depth || 0;
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'string') return value.replace(CONTROL_RE, '').slice(0, SNAP_MAX_STRING);
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    if (typeof value === 'boolean') return value;
+    if (d >= SNAP_MAX_DEPTH) return null;
+    if (Array.isArray(value)) return value.slice(0, SNAP_MAX_ITEMS).map((v) => sanitizeValue(v, d + 1));
+    if (typeof value === 'object') {
+      const out = {};
+      for (const k of Object.keys(value).slice(0, SNAP_MAX_KEYS)) out[k.slice(0, 64)] = sanitizeValue(value[k], d + 1);
+      return out;
+    }
+    return null;
+  }
+
+  // JSON 文字列 → { ok: true, data } か { ok: false, error: 'tooLarge' | 'json' | 'shape' }
+  function parseSnapshot(text) {
+    const s = String(text === null || text === undefined ? '' : text);
+    if (utf8Bytes(s).length > SNAPSHOT_MAX_BYTES) return { ok: false, error: 'tooLarge' };
+    let obj;
+    try {
+      obj = JSON.parse(s);
+    } catch (e) {
+      return { ok: false, error: 'json' };
+    }
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return { ok: false, error: 'shape' };
+    const known = ATTRIBUTES.filter((a) => a.path[0] in obj && a.path[0] !== 'network').length;
+    if (known < 3 || !obj.ua || typeof obj.ua !== 'object') return { ok: false, error: 'shape' };
+    const data = sanitizeValue(obj, 0);
+    if (typeof data.timestamp !== 'string') data.timestamp = null;
+    return { ok: true, data };
+  }
+
+  // 2つのスナップショットを属性ごとに比べる
+  function compareSnapshots(a, b) {
+    const rows = ATTRIBUTES.map((attr) => {
+      const va = getPath(a || {}, attr.path);
+      const vb = getPath(b || {}, attr.path);
+      return { key: attr.key, inId: attr.inId, a: va, b: vb, same: canonicalize(va) === canonicalize(vb) };
+    });
+    const changed = rows.filter((r) => !r.same).map((r) => r.key);
+    const changedInId = rows.filter((r) => !r.same && r.inId).map((r) => r.key);
+    return { rows, changed, changedInId, total: rows.length, idA: fingerprintId(a).id, idB: fingerprintId(b).id };
+  }
+
+  // スナップショットの短い説明（ブラウザー・OS・時刻）
+  function describeSnapshot(data) {
+    const d = data || {};
+    const ua = d.ua || {};
+    const br = detectBrowser({ ua: ua.userAgent, brands: ua.uaData && ua.uaData.brands });
+    const os = detectOS({ ua: ua.userAgent, chPlatform: ua.uaData && ua.uaData.platform, platform: ua.platform, maxTouchPoints: d.hardware && d.hardware.maxTouchPoints });
+    return { browser: br.version ? br.name + ' ' + br.version : br.name, os: os.name, timestamp: typeof d.timestamp === 'string' ? d.timestamp : null };
+  }
+
+  /* ======================================================================
      表示用の整形（DOM は使わない）
      ====================================================================== */
   function formatValue(v) {
@@ -399,5 +466,6 @@
     ATTRIBUTES, STUDY_TABLE, STUDY_META, FIXED_PLUGIN_NAMES, attributeRows, stableSubset, fingerprintId, diffAttributes, isMobileHint,
     detectProtections, parseIpify, parseIpCache, validIp, formatValue, formatBits, getPath,
     FONT_LIST, FONT_BASES, detectedFonts, fontsSummary,
+    SNAPSHOT_MAX_BYTES, sanitizeValue, parseSnapshot, compareSnapshots, describeSnapshot,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

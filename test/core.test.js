@@ -384,6 +384,70 @@ test('fontsSummary は候補にある名前だけを数える', () => {
   assert.equal(C.attributeRows(sample(), true).find((r) => r.key === 'fonts').bits, 2.192);
 });
 
+// ---- スナップショットの読み込みと比較
+
+test('parseSnapshot: このツールの JSON を受け付け、大きすぎる・壊れた・形の違うものを断る', () => {
+  const ok = C.parseSnapshot(JSON.stringify(sample()));
+  assert.equal(ok.ok, true);
+  assert.equal(ok.data.ua.userAgent, UA.winChrome);
+  assert.equal(C.fingerprintId(ok.data).id, C.fingerprintId(sample()).id);
+  assert.deepEqual(C.parseSnapshot('{bad'), { ok: false, error: 'json' });
+  assert.deepEqual(C.parseSnapshot('[1, 2]'), { ok: false, error: 'shape' });
+  assert.deepEqual(C.parseSnapshot('{"a": 1}'), { ok: false, error: 'shape' });
+  assert.deepEqual(C.parseSnapshot('{"ua": "x", "screen": {}, "time": {}, "language": {}}'), { ok: false, error: 'shape' });
+  assert.deepEqual(C.parseSnapshot(''), { ok: false, error: 'json' });
+  assert.deepEqual(C.parseSnapshot(null), { ok: false, error: 'json' });
+  assert.deepEqual(C.parseSnapshot('{"ua":{},"screen":{},"time":{},"x":"' + 'a'.repeat(C.SNAPSHOT_MAX_BYTES) + '"}'), { ok: false, error: 'tooLarge' });
+});
+
+test('parseSnapshot は値の型と長さと深さを絞り、制御文字を落とす（信用しない JSON）', () => {
+  const s = sample();
+  s.ua.userAgent = 'x'.repeat(5000) + String.fromCharCode(7) + 'y';
+  s.language.languages = new Array(500).fill('ja');
+  s.screen.width = Infinity;
+  s.hardware.deep = { a: { b: { c: { d: { e: { f: 1 } } } } } };
+  s.plugins.names = [{ toString: 'nope' }];
+  const r = C.parseSnapshot(JSON.stringify(s));
+  assert.equal(r.ok, true);
+  assert.equal(r.data.ua.userAgent.length, 2000);
+  assert.equal(r.data.ua.userAgent.includes(String.fromCharCode(7)), false);
+  assert.equal(r.data.language.languages.length, 200);
+  assert.equal(r.data.screen.width, null);
+  assert.equal(r.data.hardware.deep.a.b.c, null); // 深さ5以上は捨てる
+  assert.deepEqual(r.data.plugins.names, [{ toString: 'nope' }]);
+  const t = C.parseSnapshot(JSON.stringify({ ...sample(), timestamp: 12 }));
+  assert.equal(t.data.timestamp, null);
+});
+
+test('compareSnapshots: 同じ・設定の違い・IP だけの違いを属性ごとに返す', () => {
+  const a = sample();
+  const same = C.compareSnapshots(a, sample());
+  assert.equal(same.total, C.ATTRIBUTES.length);
+  assert.deepEqual(same.changed, []);
+  assert.equal(same.idA, same.idB);
+  const b = sample();
+  b.time.timezone = 'UTC';
+  b.network = { ipv4: '198.51.100.7', ipv6: null, fetchedAt: 2, status: 'ok' };
+  const r = C.compareSnapshots(a, b);
+  assert.deepEqual(r.changed, ['time', 'network']);
+  assert.deepEqual(r.changedInId, ['time']);
+  assert.notEqual(r.idA, r.idB);
+  assert.deepEqual(r.rows.find((x) => x.key === 'time'), { key: 'time', inId: true, a: a.time, b: b.time, same: false });
+  assert.deepEqual(r.rows.find((x) => x.key === 'network'), { key: 'network', inId: false, a: a.network, b: b.network, same: false });
+  const c = sample();
+  c.network = { ipv4: '198.51.100.7', ipv6: null, fetchedAt: 2, status: 'ok' };
+  const ipOnly = C.compareSnapshots(a, c);
+  assert.deepEqual(ipOnly.changed, ['network']);
+  assert.deepEqual(ipOnly.changedInId, []);
+  assert.equal(ipOnly.idA, ipOnly.idB);
+  assert.equal(C.compareSnapshots({}, {}).changed.length, 0);
+});
+
+test('describeSnapshot はブラウザー・OS・時刻を短くまとめる', () => {
+  assert.deepEqual(C.describeSnapshot(sample()), { browser: 'Chrome 140', os: 'Windows', timestamp: '2026-10-07T06:00:00.000Z' });
+  assert.deepEqual(C.describeSnapshot({}), { browser: 'Unknown', os: 'Unknown', timestamp: null });
+});
+
 // ---- 整形
 
 test('formatValue・formatBits', () => {

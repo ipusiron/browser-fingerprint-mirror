@@ -31,6 +31,7 @@
     <nav class="tabs" role="tablist" aria-label="表示モード" data-i18n-attr="aria-label:ui.tabsLabel">
       <button class="tab active" id="tab-btn-simple" type="button" role="tab" data-tab="simple" aria-selected="true" aria-controls="simple" data-i18n="ui.tabSimple">シンプル</button>
       <button class="tab" id="tab-btn-advanced" type="button" role="tab" data-tab="advanced" aria-selected="false" aria-controls="advanced" tabindex="-1" data-i18n="ui.tabAdvanced">詳細・分析</button>
+      <button class="tab" id="tab-btn-compare" type="button" role="tab" data-tab="compare" aria-selected="false" aria-controls="compare" tabindex="-1" data-i18n="ui.tabCompare">比較</button>
       <button class="tab" id="tab-btn-learn" type="button" role="tab" data-tab="learn" aria-selected="false" aria-controls="learn" tabindex="-1" data-i18n="ui.tabLearn">座学</button>
     </nav>
 
@@ -158,6 +159,56 @@
       </details>
     </section>
 
+    <!-- 比較 -->
+    <section id="compare" class="panel" role="tabpanel" aria-labelledby="tab-btn-compare">
+      <p class="hint" data-i18n="cmp.intro">2つの環境の指紋を属性ごとに比べます。Aに「いまの環境」を入れてから、シークレットモード・別のブラウザー・VPN・拡張機能の有無などで開いた画面の「JSONコピー」をBに貼り付けると、何が変わって何が変わらないかが見えます。JSONはこのページの中で読むだけで、どこにも送りません。</p>
+      <div class="cmp-grid">
+        <section class="cmp-side" aria-labelledby="cmp-a-title">
+          <h2 class="section-title" id="cmp-a-title" data-i18n="cmp.sideA">A</h2>
+          <div class="toolbar">
+            <button class="btn" id="cmp-a-current" type="button" data-i18n="cmp.useCurrent">いまの環境を入れる</button>
+            <button class="btn secondary" id="cmp-a-paste" type="button" data-i18n="cmp.paste">貼り付けたJSONを読む</button>
+            <button class="btn secondary" id="cmp-a-file" type="button" data-i18n="cmp.file">JSONファイルを読む</button>
+            <input type="file" id="cmp-a-input" accept=".json,application/json" hidden />
+          </div>
+          <textarea class="cmp-text" id="cmp-a-text" rows="4" placeholder="「JSONコピー」の内容を貼り付け" data-i18n-attr="placeholder:cmp.placeholder;aria-label:cmp.textLabelA" aria-label="AのJSON"></textarea>
+          <p class="status" id="cmp-a-status" aria-live="polite"></p>
+        </section>
+        <section class="cmp-side" aria-labelledby="cmp-b-title">
+          <h2 class="section-title" id="cmp-b-title" data-i18n="cmp.sideB">B</h2>
+          <div class="toolbar">
+            <button class="btn" id="cmp-b-current" type="button" data-i18n="cmp.useCurrent">いまの環境を入れる</button>
+            <button class="btn secondary" id="cmp-b-paste" type="button" data-i18n="cmp.paste">貼り付けたJSONを読む</button>
+            <button class="btn secondary" id="cmp-b-file" type="button" data-i18n="cmp.file">JSONファイルを読む</button>
+            <input type="file" id="cmp-b-input" accept=".json,application/json" hidden />
+          </div>
+          <textarea class="cmp-text" id="cmp-b-text" rows="4" placeholder="「JSONコピー」の内容を貼り付け" data-i18n-attr="placeholder:cmp.placeholder;aria-label:cmp.textLabelB" aria-label="BのJSON"></textarea>
+          <p class="status" id="cmp-b-status" aria-live="polite"></p>
+        </section>
+      </div>
+      <div class="toolbar">
+        <button class="btn" id="cmp-run" type="button" data-i18n="cmp.run">比べる</button>
+        <button class="btn secondary" id="cmp-swap" type="button" data-i18n="cmp.swap">AとBを入れ替える</button>
+      </div>
+      <div class="id-wrap" id="cmp-summary" hidden>
+        <div class="id-label" data-i18n="cmp.summaryLabel">比較の結果</div>
+        <p class="cmp-ids" id="cmp-ids"></p>
+        <p class="cmp-changed" id="cmp-changed" aria-live="polite"></p>
+        <p class="hint" data-i18n="cmp.summaryHint">指紋IDに含む属性が1つでも違えばIDは変わります。IPは指紋IDに含めないので、IPだけが違っても同じIDです。</p>
+      </div>
+      <div class="cmp-list" id="cmp-list"></div>
+      <details class="privacy">
+        <summary data-i18n="cmp.howtoTitle">試してみる実験</summary>
+        <ul>
+          <li data-i18n="cmp.howto1">シークレットモード（プライベートウィンドウ）で同じページを開き、「JSONコピー」をBに貼る。端末やOSの情報は変わらないので、指紋IDは同じになる</li>
+          <li data-i18n="cmp.howto2">別のブラウザー（ChromeとFirefoxなど）で開いて比べる。User-Agent・WebGL・Canvas・フォントの検出結果が変わる</li>
+          <li data-i18n="cmp.howto3">VPNを使って比べる。変わるのはIPだけで、指紋IDは同じになる</li>
+          <li data-i18n="cmp.howto4">Canvas Blockerなどの拡張機能や、Firefoxのprivacy.resistFingerprintingを有効にして比べる。どの属性が隠されるかが見える</li>
+          <li data-i18n="cmp.howto5">別の端末のJSONをファイルで持ち込んで比べる。端末が違えば、どれだけ多くの属性が違うかがわかる</li>
+        </ul>
+      </details>
+    </section>
+
     <!-- 座学 -->
     <section id="learn" class="panel" role="tabpanel" aria-labelledby="tab-btn-learn">
       <div class="learn-content">
@@ -182,7 +233,7 @@
               <li data-i18n="learn.s2.li4">仕様で固定（識別力なし）＝プラグイン一覧</li>
               <li data-i18n="learn.s2.li5">接続ごとに変わる＝IPアドレス（指紋IDには含めない）</li>
             </ul>
-            <p data-i18n="learn.s2.p3">試してみましょう。「もう一度読む」を押す、シークレットモードで開く、別のブラウザーで開く、VPNを使う。それぞれで何が変わるかを「属性の一覧」で見比べると、指紋の性質が見えてきます。</p>
+            <p data-i18n="learn.s2.p3">試してみましょう。「もう一度読む」を押す、シークレットモードで開く、別のブラウザーで開く、VPNを使う。それぞれで何が変わるかを「比較」タブで並べると、指紋の性質が見えてきます。</p>
           </div>
         </details>
 
