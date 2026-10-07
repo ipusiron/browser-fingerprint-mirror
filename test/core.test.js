@@ -144,7 +144,11 @@ test('isReducedUA: Chromium の削減された UA（.0.0.0）を見分ける', (
 
 const sample = () => ({
   timestamp: '2026-10-07T06:00:00.000Z',
-  ua: { userAgent: UA.winChrome, platform: 'Win32', vendor: 'Google Inc.', uaData: { brands: [{ brand: 'Google Chrome', version: '140' }], mobile: false, platform: 'Windows' }, uaHigh: { platformVersion: '15.0.0' } },
+  ua: {
+    userAgent: UA.winChrome, platform: 'Win32', vendor: 'Google Inc.',
+    uaData: { brands: [{ brand: 'Google Chrome', version: '140' }], mobile: false, platform: 'Windows' },
+    uaHigh: { platformVersion: '15.0.0' },
+  },
   screen: { width: 1920, height: 1080, availWidth: 1920, availHeight: 1040, colorDepth: 24, pixelDepth: 24, devicePixelRatio: 1 },
   language: { language: 'ja-JP', languages: ['ja-JP', 'en'] },
   intl: { locale: 'ja-JP', calendar: 'gregory', numberingSystem: 'latn' },

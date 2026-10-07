@@ -3,103 +3,112 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api4.ipify.org https://api6.ipify.org https://ipapi.co; img-src 'self' data: https:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" />
-  <meta name="referrer" content="no-referrer-when-downgrade" />
-  <title>Browser Fingerprint Mirror</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api4.ipify.org https://api6.ipify.org https://ipapi.co; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="color-scheme" content="dark light" />
+  <title data-i18n="ui.docTitle">Browser Fingerprint Mirror - ブラウザー指紋ミラー</title>
+  <link rel="icon" href="data:," />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
+  <noscript><p class="noscript" data-i18n="ui.noscript">このツールはJavaScriptで動きます。JavaScriptを有効にしてください。</p></noscript>
   <header class="header">
     <div class="header-content">
-      <div>
-        <h1>Browser Fingerprint Mirror（ブラウザー指紋ミラー）</h1>
-        <p class="subtitle">あなたのブラウザーに「映っている」指紋情報を可視化する</p>
+      <div class="header-title">
+        <h1 data-i18n="ui.title">Browser Fingerprint Mirror（ブラウザー指紋ミラー）</h1>
+        <p class="subtitle" data-i18n="ui.subtitle">あなたのブラウザーに「映っている」指紋情報を可視化する</p>
       </div>
-      <button id="theme-toggle" class="theme-toggle" aria-label="テーマ切替">
-        <span class="theme-icon">☀️</span>
-      </button>
+      <div class="header-actions">
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="ライトモードに切替" data-i18n-attr="aria-label:theme.toLight">
+          <span class="theme-icon" aria-hidden="true">☀️</span>
+        </button>
+      </div>
     </div>
   </header>
 
   <main class="container">
-    <nav class="tabs" role="tablist" aria-label="modes">
-      <button class="tab active" data-tab="simple" role="tab" aria-selected="true">シンプル</button>
-      <button class="tab" data-tab="advanced" role="tab" aria-selected="false">詳細・分析</button>
-      <button class="tab" data-tab="learn" role="tab" aria-selected="false">座学</button>
+    <nav class="tabs" role="tablist" aria-label="表示モード" data-i18n-attr="aria-label:ui.tabsLabel">
+      <button class="tab active" id="tab-btn-simple" type="button" role="tab" data-tab="simple" aria-selected="true" aria-controls="simple" data-i18n="ui.tabSimple">シンプル</button>
+      <button class="tab" id="tab-btn-advanced" type="button" role="tab" data-tab="advanced" aria-selected="false" aria-controls="advanced" tabindex="-1" data-i18n="ui.tabAdvanced">詳細・分析</button>
+      <button class="tab" id="tab-btn-learn" type="button" role="tab" data-tab="learn" aria-selected="false" aria-controls="learn" tabindex="-1" data-i18n="ui.tabLearn">座学</button>
     </nav>
 
     <!-- シンプルモード -->
-    <section id="simple" class="panel active" role="tabpanel" aria-label="simple">
+    <section id="simple" class="panel active" role="tabpanel" aria-labelledby="tab-btn-simple">
       <div class="group">
-        <h3 class="group-title">🖥️ ブラウザー・システム</h3>
+        <h2 class="group-title" data-i18n="simple.groupSystem">🖥️ ブラウザー・システム</h2>
         <div class="grid">
           <div class="card">
-            <div class="label">ブラウザー</div>
+            <div class="label" data-i18n="simple.browser">ブラウザー</div>
             <div class="value" id="simple-browser">-</div>
-            <div class="hint">User-Agent/UA-CHから推定</div>
+            <div class="hint" data-i18n="simple.browserHint">UA-CHがあればそれを、無ければUser-Agentから推定</div>
           </div>
           <div class="card">
-            <div class="label">OS</div>
+            <div class="label" data-i18n="simple.os">OS</div>
             <div class="value" id="simple-os">-</div>
+            <div class="hint" id="simple-os-source"></div>
           </div>
           <div class="card">
-            <div class="label">画面解像度</div>
+            <div class="label" data-i18n="simple.res">画面解像度</div>
             <div class="value" id="simple-res">-</div>
-            <div class="hint">devicePixelRatio考慮</div>
+            <div class="hint" data-i18n="simple.resHint">devicePixelRatioを併記</div>
           </div>
         </div>
       </div>
 
       <div class="group">
-        <h3 class="group-title">🌐 ネットワーク</h3>
+        <h2 class="group-title" data-i18n="simple.groupNetwork">🌐 ネットワーク</h2>
+        <div class="net-fetch">
+          <button class="btn" id="fetch-ip" type="button" data-i18n="net.button">IPを取得する（外部APIへ接続）</button>
+          <p class="hint" data-i18n="net.note">押すと ipify.org（IPv4/IPv6）と ipapi.co（ISP）へ接続します。押すまで外部へは何も送りません。ipapi.co の無料枠では問い合わせたIPがログに残ります。結果は5分間ブラウザーに保存します。</p>
+          <p class="status" id="net-status" aria-live="polite"></p>
+        </div>
         <div class="grid">
           <div class="card">
-            <div class="label">IPv4アドレス</div>
+            <div class="label" data-i18n="simple.ipv4">IPv4アドレス</div>
             <div class="value" id="simple-ipv4">-</div>
-            <div class="hint">外部API経由で取得</div>
           </div>
           <div class="card">
-            <div class="label">IPv6アドレス</div>
+            <div class="label" data-i18n="simple.ipv6">IPv6アドレス</div>
             <div class="value" id="simple-ipv6">-</div>
-            <div class="hint">外部API経由で取得</div>
           </div>
           <div class="card">
-            <div class="label">ISP / プロバイダー</div>
+            <div class="label" data-i18n="simple.isp">ISP / プロバイダー</div>
             <div class="value" id="simple-isp">-</div>
-            <div class="hint">組織名またはASN情報</div>
+            <div class="hint" data-i18n="simple.ispHint">組織名とASN</div>
           </div>
         </div>
       </div>
 
       <div class="group">
-        <h3 class="group-title">🌍 地域・言語</h3>
+        <h2 class="group-title" data-i18n="simple.groupLocale">🌍 地域・言語</h2>
         <div class="grid">
           <div class="card">
-            <div class="label">言語</div>
+            <div class="label" data-i18n="simple.lang">言語</div>
             <div class="value" id="simple-lang">-</div>
           </div>
           <div class="card">
-            <div class="label">タイムゾーン</div>
+            <div class="label" data-i18n="simple.tz">タイムゾーン</div>
             <div class="value" id="simple-tz">-</div>
           </div>
         </div>
       </div>
 
       <div class="group">
-        <h3 class="group-title">⚙️ ハードウェア</h3>
+        <h2 class="group-title" data-i18n="simple.groupHardware">⚙️ ハードウェア</h2>
         <div class="grid">
           <div class="card">
-            <div class="label">タッチ/コア数/メモリ</div>
+            <div class="label" data-i18n="simple.hw">タッチ/コア数/メモリ</div>
             <div class="value" id="simple-hw">-</div>
           </div>
         </div>
       </div>
 
       <div class="group">
-        <h3 class="group-title">🔒 プライバシー設定</h3>
+        <h2 class="group-title" data-i18n="simple.groupPrivacy">🔒 プライバシー設定</h2>
         <div class="grid">
           <div class="card">
-            <div class="label">Cookie / DNT</div>
+            <div class="label" data-i18n="simple.cookieDnt">Cookie / DNT / GPC</div>
             <div class="value" id="simple-cookie-dnt">-</div>
           </div>
         </div>
@@ -107,34 +116,54 @@
     </section>
 
     <!-- 詳細・分析 -->
-    <section id="advanced" class="panel" role="tabpanel" aria-label="advanced">
+    <section id="advanced" class="panel" role="tabpanel" aria-labelledby="tab-btn-advanced">
       <div class="toolbar">
-        <button class="btn" id="refresh-adv">再取得</button>
-        <button class="btn secondary" id="copy-json">JSONコピー</button>
+        <button class="btn" id="refresh-adv" type="button" data-i18n="adv.recalc">もう一度読む</button>
+        <button class="btn secondary" id="copy-json" type="button" data-i18n="adv.copy">JSONコピー</button>
       </div>
 
-      <div class="score-wrap">
-        <div class="score-label">ユニーク度スコア</div>
-        <div class="score" id="unique-score">--</div>
-        <div class="score-desc" id="score-desc">環境の珍しさを0〜100で推定（ローカル推定）</div>
+      <div class="id-wrap">
+        <div class="id-label" data-i18n="adv.idLabel">指紋ID</div>
+        <div class="id" id="fp-id">--</div>
+        <p class="id-desc" data-i18n="adv.idDesc">安定な属性（IPと時刻を除く）を正規化してSHA-256にした先頭16桁。同じ環境なら再読み込みでもシークレットモードでも同じ値になります。</p>
+        <dl class="id-meta">
+          <div class="id-meta-row">
+            <dt data-i18n="adv.stabilityLabel">もう一度読んだ結果</dt>
+            <dd id="fp-stability" aria-live="polite">—</dd>
+          </div>
+          <div class="id-meta-row">
+            <dt data-i18n="adv.lastLabel">前回の訪問</dt>
+            <dd id="fp-last" aria-live="polite">—</dd>
+            <dd class="id-meta-action"><button class="btn secondary small" id="clear-last" type="button" data-i18n="adv.clearLast">前回の記録を消す</button></dd>
+          </div>
+        </dl>
       </div>
 
-      <div class="adv-grid" id="adv-grid">
-        <!-- 動的に項目カードを挿入 -->
-      </div>
+      <section class="prot-wrap">
+        <h2 class="section-title" data-i18n="adv.protLabel">保護の検出</h2>
+        <ul class="prot-list" id="prot-list" aria-live="polite"></ul>
+        <p class="hint" data-i18n="adv.protHint">観測できた事実だけを並べています。ここに出ないものは「検出できなかった」であって「保護がない」ではありません。</p>
+      </section>
+
+      <section class="attr-wrap">
+        <h2 class="section-title" data-i18n="adv.attrLabel">属性の一覧</h2>
+        <p class="hint" data-i18n="adv.attrHint">「研究での識別力」は、2018年の大規模調査（約207万件）でその属性が持っていた情報量（bits）です。あなたの値の珍しさではなく、属性の種類ごとの参考値です。</p>
+        <div class="adv-grid" id="adv-grid"></div>
+      </section>
 
       <details class="privacy">
-        <summary>プライバシー / 免責</summary>
+        <summary data-i18n="privacy.summary">プライバシー / 免責</summary>
         <ul>
-          <li>このページはクライアントサイドのみで動作し、データは外部送信しません。</li>
-          <li>ユニーク度スコアは単純モデルの推定であり、厳密な統計に基づくものではありません。</li>
-          <li>Canvas/WebGL等の「指紋化し得る」値は教育目的で表示しています。</li>
+          <li data-i18n="privacy.line1">収集した値はこのページの中で表示するだけで、サーバーへ送信しません。</li>
+          <li data-i18n="privacy.line2">例外は「IPを取得する」を押したときだけで、ipify.org と ipapi.co に接続します（接続先にはあなたのIPアドレスが渡ります）。</li>
+          <li data-i18n="privacy.line3">ブラウザーに保存するのは、テーマと言語の選択、前回の指紋ID、5分間のIP情報だけです。</li>
+          <li data-i18n="privacy.line4">Canvas/WebGL/Audioの値は教育のために表示しています。「研究での識別力」は研究データの参考値で、あなたの珍しさではありません。</li>
         </ul>
       </details>
     </section>
 
     <!-- 座学 -->
-    <section id="learn" class="panel" role="tabpanel" aria-label="learn">
+    <section id="learn" class="panel" role="tabpanel" aria-labelledby="tab-btn-learn">
       <div class="learn-content">
         <details class="learn-accordion" open>
           <summary class="learn-summary">📚 ブラウザー指紋（Browser Fingerprinting）とは</summary>
@@ -203,12 +232,13 @@
 
   <footer>
     <div class="footer">
-      🔗 GitHubリポジトリはこちら（
-      <a href="https://github.com/ipusiron/browser-fingerprint-mirror" target="_blank" rel="noopener noreferrer">ipusiron/browser-fingerprint-mirror</a>
-      ）
+      <span data-i18n="ui.footerPre">🔗 GitHubリポジトリーはこちら（</span><a href="https://github.com/ipusiron/browser-fingerprint-mirror" target="_blank" rel="noopener noreferrer">ipusiron/browser-fingerprint-mirror</a><span data-i18n="ui.footerPost">）</span>
     </div>
   </footer>
 
+  <script src="./js/fp-core.js"></script>
+  <script src="./js/fp-collect.js"></script>
+  <script src="./js/messages.js"></script>
   <script src="./script.js"></script>
 </body>
 </html>
