@@ -100,7 +100,7 @@ test('script.js が出す動的な文言のキーが両方の辞書にそろう�
     'webglMasked.on', 'webglMasked.off', 'uaReduced.on', 'uaReduced.off', 'deviceMemoryHidden.on', 'deviceMemoryHidden.off', 'dnt.on', 'dnt.off',
     'gpc.on', 'gpc.off', 'gpc.na', 'tzUtc.on', 'tzUtc.off']) used.add('prot.' + k);
   for (const k of ['simple.gpcOn', 'simple.gpcOff', 'simple.gpcNa', 'simple.cookieOn', 'simple.cookieOff', 'simple.dntOn', 'simple.dntOff', 'simple.yes', 'simple.no',
-    'theme.toLight', 'theme.toDark', 'net.statusCache', 'net.statusRateLimited', 'net.statusNoisp', 'net.statusFailed', 'net.statusOk']) used.add(k);
+    'theme.toLight', 'theme.toDark', 'net.statusCache', 'net.statusFailed', 'net.statusOk']) used.add(k);
   for (const k of used) assert.ok(k in MESSAGES.ja && k in MESSAGES.en, `辞書にないキー: ${k}`);
   assert.ok(used.size >= 60, String(used.size));
 });

@@ -62,7 +62,7 @@ Instead, without sending anything, it shows what is visible, whether it is stabl
 
 - Browser and OS (UA Client Hints first, otherwise the User-Agent), screen resolution and devicePixelRatio
 - Languages, time zone, touch/CPU cores/memory, and the state of cookies, Do Not Track and Global Privacy Control
-- IPv4/IPv6 addresses and the ISP are fetched from external APIs (ipify.org, ipapi.co) only when you press "Fetch IP". The result is kept in the browser for 5 minutes
+- IPv4/IPv6 addresses are fetched from an external API (ipify.org) only when you press "Fetch IP". The result is kept in the browser for 5 minutes. The ISP is not looked up (see the external sites in the references)
 
 ### Details & analysis mode
 
@@ -144,7 +144,7 @@ Canvas is drawn twice; only the first hash enters the ID (the second is for dete
 | Canvas hash | Set by device and OS (hard to change) | included | 8.043 | 7.930 | Canvas |
 | Audio hash | Set by device and OS (hard to change) | included | — | — | — |
 | Plugins | Fixed by specification (no identifying power) | included | 10.281 | 0.206 | List of plugins |
-| Network (IP/ISP) | Changes per connection | excluded | — | — | — |
+| Network (IP) | Changes per connection | excluded | — | — | — |
 
 "Bits" is the Shannon entropy that Gómez-Boix, Laperdrix and Baudry (2018) measured on 2,067,942 fingerprints collected on a major French website.
 The PC column (1,816,776 fingerprints) or the mobile column (251,166) is chosen from the UA-CH `mobile` hint and similar signals.
@@ -226,10 +226,9 @@ Protection detection covers only what can be observed, and the IP depends on ext
 
 ## 🔒 Security and privacy
 
-- Collected values are only displayed on the page and never sent to a server. The only outbound connections are ipify.org and ipapi.co when you press "Fetch IP"; they receive your IP address
-- ipapi.co's free tier allows about 1,000 requests per day and keeps queried IPs in its logs (as stated on its pricing page). It is not meant for production use
+- Collected values are only displayed on the page and never sent to a server. The only outbound connection is ipify.org when you press "Fetch IP"; it receives your IP address. ipify.org states that it logs no visitor information
 - The browser stores only the theme and language choice, the previous fingerprint ID (removable with "Clear previous record") and the IP information for 5 minutes. Everything read back is validated and discarded if corrupted
-- The meta CSP is `default-src 'self'` without `unsafe-inline`; `connect-src` lists only the three hosts above; the referrer policy is `no-referrer`
+- The meta CSP is `default-src 'self'` without `unsafe-inline`; `connect-src` lists only the two ipify hosts; the referrer policy is `no-referrer`
 - Rendering uses `textContent`, never `innerHTML`. API responses are validated before display
 - No external libraries, CDNs or analytics
 
@@ -239,7 +238,7 @@ Protection detection covers only what can be observed, and the IP depends on ext
 
 - "Identifying power in research" is an average from research data, not the rarity of your value
 - "Detected protections" shows only observed facts. Not detected does not mean no protection
-- On a connection without IPv6, the IPv6 field reads "unsupported or failed". ipapi.co may answer with a bot-protection challenge, in which case the ISP reads "failed" (the IPv4 address still comes from ipify.org). If it rate-limits you (HTTP 429), wait and try again
+- On a connection without IPv6, the IPv6 field reads "unsupported or failed". The ISP is not looked up (APIs that answer with bot-protection challenges cannot be used from a browser)
 - The page works from `file://`, but the clipboard is denied there (the failure is reported)
 - This is an educational demo; it does not encourage tracking or commercial use
 

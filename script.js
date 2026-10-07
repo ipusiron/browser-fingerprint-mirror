@@ -163,13 +163,6 @@
     const none = t('net.notFetched');
     $('#simple-ipv4').textContent = net ? (net.ipv4 || t('net.unsupported')) : none;
     $('#simple-ipv6').textContent = net ? (net.ipv6 || t('net.unsupported')) : none;
-    let isp = none;
-    if (net) {
-      if (net.isp) isp = net.asn ? net.isp + ' / ' + net.asn : net.isp;
-      else if (net.status === 'rateLimited') isp = t('net.rateLimited');
-      else isp = t('net.failed');
-    }
-    $('#simple-isp').textContent = isp;
   }
 
   function setNetStatus(key, params) {
@@ -184,7 +177,6 @@
     status.textContent = t('net.loading');
     $('#simple-ipv4').textContent = t('net.loading');
     $('#simple-ipv6').textContent = t('net.loading');
-    $('#simple-isp').textContent = t('net.loading');
     try {
       const net = await COL.fetchNetwork({ fetchFn: (url) => fetch(url), now: Date.now(), getItem: lsGet, setItem: lsSet });
       state.network = net;
@@ -192,8 +184,6 @@
       fillNetwork(net);
       const at = new Date(net.fetchedAt).toLocaleTimeString();
       if (net.status === 'cache') setNetStatus('net.statusCache', { at });
-      else if (net.status === 'rateLimited') setNetStatus('net.statusRateLimited');
-      else if (net.status === 'noisp') setNetStatus('net.statusNoisp');
       else if (net.status === 'failed') setNetStatus('net.statusFailed');
       else setNetStatus('net.statusOk', { at });
       renderAttributes();

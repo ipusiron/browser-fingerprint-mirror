@@ -23,9 +23,9 @@
 - PRs: summary, rationale, before/after screenshots for UI changes, and any change to the CSP or to outbound requests.
 
 ## Security & Configuration Tips
-- Do not add outbound requests. The only allowed hosts are `api4.ipify.org`, `api6.ipify.org`, `ipapi.co`, and only behind the explicit button. Keep the meta CSP strict (no `unsafe-inline`, no external scripts/styles, no analytics).
-- Validate anything read from the network or localStorage before rendering (see `FPCore.parseIpify`, `parseIpapi`, `parseIpCache`).
-- Never commit screenshots that show a real IP address or ISP name; take them before pressing the IP button or with mocked responses.
+- Do not add outbound requests. The only allowed hosts are `api4.ipify.org` and `api6.ipify.org`, and only behind the explicit button. Keep the meta CSP strict (no `unsafe-inline`, no external scripts/styles, no analytics).
+- Validate anything read from the network or localStorage before rendering (see `FPCore.parseIpify`, `parseIpCache`).
+- Never commit screenshots that show a real IP address; take them before pressing the IP button or with mocked responses.
 
 ## Agent-Specific Notes
 - Scope: repo-wide. Prefer minimal diffs, no frameworks, no build tooling. Align with `CLAUDE.md` for architecture and data shape.

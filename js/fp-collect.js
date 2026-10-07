@@ -11,7 +11,6 @@
   const CACHE_TTL_MS = 5 * 60 * 1000;
   const URL_V4 = 'https://api4.ipify.org?format=json';
   const URL_V6 = 'https://api6.ipify.org?format=json';
-  const URL_GEO = 'https://ipapi.co/json/';
   const HIGH_ENTROPY_HINTS = ['architecture', 'bitness', 'model', 'platformVersion', 'uaFullVersion', 'fullVersionList', 'wow64', 'formFactors'];
 
   function matches(query) {
@@ -262,7 +261,7 @@
     };
   }
 
-  // IP/ISP の取得。押したときだけ呼ぶ。env = { fetchFn, now, getItem, setItem }
+  // IP の取得（ipify.org）。押したときだけ呼ぶ。env = { fetchFn, now, getItem, setItem }
   async function fetchNetwork(env) {
     const cached = C.parseIpCache(env.getItem(CACHE_KEY), env.getItem(CACHE_TIME_KEY), env.now, CACHE_TTL_MS);
     if (cached) return { ...cached, status: 'cache' };
@@ -270,28 +269,9 @@
     const [v4, v6] = await Promise.allSettled([json(URL_V4), json(URL_V6)]);
     const ipv4 = v4.status === 'fulfilled' ? C.parseIpify(v4.value) : null;
     const ipv6 = v6.status === 'fulfilled' ? C.parseIpify(v6.value) : null;
-    let isp = null;
-    let asn = null;
-    let status = 'ok';
-    try {
-      const r = await env.fetchFn(URL_GEO);
-      if (r.ok) {
-        const p = C.parseIpapi(await r.json());
-        if (p) {
-          isp = p.isp;
-          asn = p.asn;
-        } else {
-          status = 'noisp';
-        }
-      } else {
-        status = r.status === 429 ? 'rateLimited' : 'failed';
-      }
-    } catch (e) {
-      status = 'failed';
-    }
-    const net = { ipv4, ipv6, isp, asn, fetchedAt: env.now, status };
-    if (ipv4 || ipv6 || isp) {
-      env.setItem(CACHE_KEY, JSON.stringify({ ipv4, ipv6, isp, asn }));
+    const net = { ipv4, ipv6, fetchedAt: env.now, status: ipv4 || ipv6 ? 'ok' : 'failed' };
+    if (ipv4 || ipv6) {
+      env.setItem(CACHE_KEY, JSON.stringify({ ipv4, ipv6 }));
       env.setItem(CACHE_TIME_KEY, String(env.now));
     }
     return net;

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api4.ipify.org https://api6.ipify.org https://ipapi.co; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api4.ipify.org https://api6.ipify.org; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';" />
   <meta name="referrer" content="no-referrer" />
   <meta name="color-scheme" content="dark light" />
   <title data-i18n="ui.docTitle">Browser Fingerprint Mirror - ブラウザー指紋ミラー</title>
@@ -61,7 +61,7 @@
         <h2 class="group-title" data-i18n="simple.groupNetwork">🌐 ネットワーク</h2>
         <div class="net-fetch">
           <button class="btn" id="fetch-ip" type="button" data-i18n="net.button">IPを取得する（外部APIへ接続）</button>
-          <p class="hint" data-i18n="net.note">押すとipify.org（IPv4/IPv6）とipapi.co（ISP）へ接続します。押すまで外部へは何も送りません。ipapi.coの無料枠では問い合わせたIPがログに残ります。結果は5分間ブラウザーに保存します。</p>
+          <p class="hint" data-i18n="net.note">押すとipify.org（IPv4/IPv6）へ接続し、接続先にはあなたのIPアドレスが渡ります。押すまで外部へは何も送りません。ipify.orgは訪問者の情報を記録しないと明記しています。結果は5分間ブラウザーに保存します。ISPは取得しません（座学の参考リンクの外部サイトで確認できます）。</p>
           <p class="status" id="net-status" aria-live="polite"></p>
         </div>
         <div class="grid">
@@ -72,11 +72,6 @@
           <div class="card">
             <div class="label" data-i18n="simple.ipv6">IPv6アドレス</div>
             <div class="value" id="simple-ipv6">-</div>
-          </div>
-          <div class="card">
-            <div class="label" data-i18n="simple.isp">ISP / プロバイダー</div>
-            <div class="value" id="simple-isp">-</div>
-            <div class="hint" data-i18n="simple.ispHint">組織名とASN</div>
           </div>
         </div>
       </div>
@@ -156,7 +151,7 @@
         <summary data-i18n="privacy.summary">プライバシー / 免責</summary>
         <ul>
           <li data-i18n="privacy.line1">収集した値はこのページの中で表示するだけで、サーバーへ送信しません。</li>
-          <li data-i18n="privacy.line2">例外は「IPを取得する」を押したときだけで、ipify.orgとipapi.coに接続します（接続先にはあなたのIPアドレスが渡ります）。</li>
+          <li data-i18n="privacy.line2">例外は「IPを取得する」を押したときだけで、ipify.orgに接続します（接続先にはあなたのIPアドレスが渡ります）。</li>
           <li data-i18n="privacy.line3">ブラウザーに保存するのは、テーマと言語の選択、前回の指紋ID、5分間のIP情報だけです。</li>
           <li data-i18n="privacy.line4">Canvas/WebGL/Audioの値は教育のために表示しています。「研究での識別力」は研究データの参考値で、あなたの珍しさではありません。</li>
         </ul>
@@ -185,7 +180,7 @@
               <li data-i18n="learn.s2.li2">設定で決まる（変えられる）＝言語・ロケール・タイムゾーン・ストレージの可否・Cookie・DNT・GPC・メディアクエリ</li>
               <li data-i18n="learn.s2.li3">更新で変わる＝User-Agent・UA Client Hints</li>
               <li data-i18n="learn.s2.li4">仕様で固定（識別力なし）＝プラグイン一覧</li>
-              <li data-i18n="learn.s2.li5">接続ごとに変わる＝IPアドレスとISP（指紋IDには含めない）</li>
+              <li data-i18n="learn.s2.li5">接続ごとに変わる＝IPアドレス（指紋IDには含めない）</li>
             </ul>
             <p data-i18n="learn.s2.p3">試してみましょう。「もう一度読む」を押す、シークレットモードで開く、別のブラウザーで開く、VPNを使う。それぞれで何が変わるかを「属性の一覧」で見比べると、指紋の性質が見えてきます。</p>
           </div>

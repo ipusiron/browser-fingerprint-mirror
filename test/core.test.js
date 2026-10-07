@@ -161,7 +161,7 @@ const sample = () => ({
   canvas: { hash: 'aaaaaaaaaaaaaaaa', hash2: 'aaaaaaaaaaaaaaaa', sampleLen: 1234 },
   audio: { hash: 'bbbbbbbbbbbbbbbb' },
   plugins: { names: C.FIXED_PLUGIN_NAMES.slice(), count: 5, pdfViewerEnabled: true },
-  network: { ipv4: '192.0.2.10', ipv6: null, isp: 'Example ISP Inc.', asn: 'AS64496', fetchedAt: 1 },
+  network: { ipv4: '192.0.2.10', ipv6: null, fetchedAt: 1, status: 'ok' },
 });
 
 test('目録: 20行、研究の参考ビットは 2018 の Table 3 の PC/モバイルの列、IP は指紋IDに入れない', () => {
@@ -323,32 +323,28 @@ test('detectProtections: Canvas が取れない・WebGL が取れない・Safari
 
 // ---- 外部 API の応答とキャッシュ
 
-test('parseIpify・parseIpapi は形を検証し、制御文字を落とし、長さを切る', () => {
+test('parseIpify は形を検証する（ISP の API は使わない）', () => {
   assert.equal(C.parseIpify({ ip: '192.0.2.10' }), '192.0.2.10');
   assert.equal(C.parseIpify({ ip: '2001:db8::10' }), '2001:db8::10');
   assert.equal(C.parseIpify({ ip: '<script>' }), null);
   assert.equal(C.parseIpify({ ip: 12 }), null);
   assert.equal(C.parseIpify({ ip: 'abc' }), null); // 区切りがない
   assert.equal(C.parseIpify(null), null);
-  assert.deepEqual(C.parseIpapi({ org: 'Example ISP Inc.', asn: 'AS64496' }), { isp: 'Example ISP Inc.', asn: 'AS64496' });
-  assert.deepEqual(C.parseIpapi({ org: 'A' + String.fromCharCode(1) + 'B  ', asn: '' }), { isp: 'AB', asn: null });
-  assert.equal(C.parseIpapi({ org: 'x'.repeat(500) }).isp.length, 200);
-  assert.equal(C.parseIpapi({}), null);
-  assert.equal(C.parseIpapi('str'), null);
+  assert.equal(C.parseIpapi, undefined);
 });
 
 test('parseIpCache: 期限内で形が正しければ返し、壊れていれば null', () => {
   const now = 1_700_000_000_000;
   const ttl = 5 * 60 * 1000;
-  const ok = C.parseIpCache(JSON.stringify({ ipv4: '192.0.2.10', ipv6: null, isp: 'Example ISP Inc.', asn: 'AS64496' }), String(now - 1000), now, ttl);
-  assert.deepEqual(ok, { ipv4: '192.0.2.10', ipv6: null, isp: 'Example ISP Inc.', asn: 'AS64496', fetchedAt: now - 1000 });
+  const ok = C.parseIpCache(JSON.stringify({ ipv4: '192.0.2.10', ipv6: null, isp: 'ignored' }), String(now - 1000), now, ttl);
+  assert.deepEqual(ok, { ipv4: '192.0.2.10', ipv6: null, fetchedAt: now - 1000 }); // 古いキャッシュの isp は捨てる
   assert.equal(C.parseIpCache('{bad', String(now - 1000), now, ttl), null);
   assert.equal(C.parseIpCache(JSON.stringify({ ipv4: '192.0.2.10' }), String(now - ttl), now, ttl), null); // 期限切れ
   assert.equal(C.parseIpCache(JSON.stringify({ ipv4: '192.0.2.10' }), 'abc', now, ttl), null);
   assert.equal(C.parseIpCache(JSON.stringify({ ipv4: '192.0.2.10' }), String(now + 60000), now, ttl), null); // 未来の時刻
   assert.equal(C.parseIpCache('null', String(now - 1), now, ttl), null);
   assert.equal(C.parseIpCache(JSON.stringify({ ipv4: 'nope' }), String(now - 1), now, ttl), null);
-  assert.equal(C.parseIpCache(JSON.stringify({ ipv4: '192.0.2.10', isp: 'x<img>' }), String(now - 1), now, ttl).isp, 'x<img>'); // 文字列はそのまま（表示側が textContent で入れる）
+  assert.equal(C.parseIpCache(JSON.stringify({ isp: 'only isp' }), String(now - 1), now, ttl), null); // IP が無ければ使わない
   assert.equal(C.parseIpCache(JSON.stringify([1, 2]), String(now - 1), now, ttl), null);
 });
 

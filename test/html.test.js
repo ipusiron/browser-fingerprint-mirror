@@ -10,7 +10,8 @@ test('CSP の meta があり、meta では効かない指定と unsafe-inline �
   assert.match(csp[1], /default-src 'self'/);
   assert.match(csp[1], /script-src 'self'/);
   assert.match(csp[1], /style-src 'self';/);
-  assert.match(csp[1], /connect-src 'self' https:\/\/api4\.ipify\.org https:\/\/api6\.ipify\.org https:\/\/ipapi\.co;/);
+  assert.match(csp[1], /connect-src 'self' https:\/\/api4\.ipify\.org https:\/\/api6\.ipify\.org;/);
+  assert.doesNotMatch(csp[1], /ipapi/);
   assert.match(csp[1], /img-src 'self' data:;/);
   assert.match(csp[1], /object-src 'none'/);
   assert.match(csp[1], /base-uri 'none'/);
@@ -63,7 +64,7 @@ test('主要な要素の id がそろっている', () => {
   assert.match(html, /<button id="lang-toggle" class="lang-toggle" type="button" aria-label="[^"]+" data-i18n="ui\.langButton" data-i18n-attr="aria-label:ui\.langLabel">EN<\/button>/);
   assert.match(html, /<button id="theme-toggle" class="theme-toggle" type="button" aria-label="[^"]+" data-i18n-attr="aria-label:theme\.toLight">/);
   assert.match(html, /<title data-i18n="ui\.docTitle">/);
-  const ids = ['theme-toggle', 'lang-toggle', 'simple-browser', 'simple-os', 'simple-os-source', 'simple-res', 'simple-ipv4', 'simple-ipv6', 'simple-isp', 'simple-lang', 'simple-tz',
+  const ids = ['theme-toggle', 'lang-toggle', 'simple-browser', 'simple-os', 'simple-os-source', 'simple-res', 'simple-ipv4', 'simple-ipv6', 'simple-lang', 'simple-tz',
     'simple-hw', 'simple-cookie-dnt', 'fetch-ip', 'net-status', 'refresh-adv', 'copy-json', 'fp-id', 'fp-stability', 'fp-last', 'clear-last', 'prot-list', 'adv-grid'];
   for (const id of ids) assert.ok(html.includes(`id="${id}"`), `id="${id}" がない`);
 });
@@ -75,9 +76,10 @@ test('ボタンは type="button"、知らせの要素は aria-live', () => {
   }
 });
 
-test('IP の取得は押したときだけ（ボタンと接続先の説明がある）', () => {
+test('IP の取得は押したときだけ（ボタンと接続先の説明がある）。ISP の API は使わない', () => {
   assert.match(html, /<button class="btn" id="fetch-ip" type="button" data-i18n="net\.button">/);
-  assert.match(html, /data-i18n="net\.note">[^<]*ipify\.org[^<]*ipapi\.co/);
+  assert.match(html, /data-i18n="net\.note">[^<]*ipify\.org/);
+  assert.doesNotMatch(html, /ipapi/);
   assert.doesNotMatch(html, /データは外部送信しません|完全クライアントサイド/);
 });
 

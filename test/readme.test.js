@@ -113,11 +113,11 @@ test('保護の検出の規則の表は7行で、固定プラグインの5件の
   for (const name of C.FIXED_PLUGIN_NAMES) assert.ok(section[1].includes(name), `${name} がない`);
 });
 
-test('外部 API の規約を正しく書く（1日あたり約1,000リクエスト、ログに残る。「月1,000」と書かない）', () => {
-  assert.match(readme, /1日あたり約1,000リクエスト/);
-  assert.match(readme, /ログに残る/);
-  assert.doesNotMatch(readme, /月1,000/);
+test('外部 API は ipify.org だけ（ipapi.co を書かない）。「外部送信しません」と書かない', () => {
+  assert.match(readme, /ipify\.org/);
+  assert.doesNotMatch(readme, /ipapi/);
   assert.doesNotMatch(readme, /外部送信しません|完全クライアントサイド/);
+  for (const f of ['index.html', 'js/messages.js', 'js/fp-collect.js', 'CLAUDE.md', 'AGENTS.md', 'README.en.md']) assert.doesNotMatch(read(f), /ipapi/, f);
 });
 
 test('README の画像がすべて実在し、assets/ の PNG は README から参照されているものだけ。1枚ごとにキャプションがある', () => {
@@ -280,7 +280,6 @@ test('英語版の研究の表も計算部と一致する', () => {
   assert.ok(readmeEn.includes('| H_M (all unique) | ' + cols.map((c) => m.hm[c].toFixed(3)).join(' | ') + ' |'));
   assert.ok(readmeEn.includes('| Number of fingerprints | ' + cols.map((c) => m.count[c].toLocaleString('en-US')).join(' | ') + ' |'));
   assert.ok(readmeEn.includes('| Share of unique fingerprints | ' + cols.map((c) => m.unique[c] + '%').join(' | ') + ' |'));
-  assert.match(readmeEn, /about 1,000 requests per day/);
   for (const name of C.FIXED_PLUGIN_NAMES) assert.ok(readmeEn.includes(name), name);
 });
 

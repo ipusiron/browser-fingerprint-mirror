@@ -305,33 +305,17 @@
   }
 
   /* ======================================================================
-     外部 API（IP/ISP）の応答とキャッシュの検証
+     外部 API（IP）の応答とキャッシュの検証
      ====================================================================== */
   const IP_RE = /^[0-9a-fA-F.:]{2,45}$/;
-  const MAX_ORG = 200;
 
   function validIp(v) {
     return typeof v === 'string' && IP_RE.test(v) && (v.includes('.') || v.includes(':'));
   }
 
-  function cleanText(v) {
-    if (typeof v !== 'string') return null;
-    const t = v.replace(/[\u0000-\u001f\u007f]/g, '').trim();
-    return t ? t.slice(0, MAX_ORG) : null;
-  }
-
   // ipify の応答 { ip } → 文字列か null
   function parseIpify(obj) {
     return obj && validIp(obj.ip) ? obj.ip : null;
-  }
-
-  // ipapi.co の応答 { org, asn, … } → { isp, asn } か null
-  function parseIpapi(obj) {
-    if (!obj || typeof obj !== 'object') return null;
-    const isp = cleanText(obj.org);
-    const asn = cleanText(obj.asn);
-    if (!isp && !asn) return null;
-    return { isp, asn };
   }
 
   // localStorage のキャッシュ（JSON 文字列と保存時刻）を検証して返す。壊れていれば null
@@ -348,11 +332,9 @@
     const out = {
       ipv4: validIp(obj.ipv4) ? obj.ipv4 : null,
       ipv6: validIp(obj.ipv6) ? obj.ipv6 : null,
-      isp: cleanText(obj.isp),
-      asn: cleanText(obj.asn),
       fetchedAt: t,
     };
-    if (!out.ipv4 && !out.ipv6 && !out.isp && !out.asn) return null;
+    if (!out.ipv4 && !out.ipv6) return null;
     return out;
   }
 
@@ -373,6 +355,6 @@
   root.FPCore = {
     VERSION, sha256Hex, utf8Bytes, canonicalize, detectOS, detectBrowser, isReducedUA,
     ATTRIBUTES, STUDY_TABLE, STUDY_META, FIXED_PLUGIN_NAMES, attributeRows, stableSubset, fingerprintId, diffAttributes, isMobileHint,
-    detectProtections, parseIpify, parseIpapi, parseIpCache, validIp, formatValue, formatBits, getPath,
+    detectProtections, parseIpify, parseIpCache, validIp, formatValue, formatBits, getPath,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
