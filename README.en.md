@@ -239,7 +239,7 @@ Protection detection covers only what can be observed, and the IP depends on ext
 
 - "Identifying power in research" is an average from research data, not the rarity of your value
 - "Detected protections" shows only observed facts. Not detected does not mean no protection
-- On a connection without IPv6, the IPv6 field reads "unsupported or failed". If ipapi.co rate-limits you (HTTP 429), wait and try again
+- On a connection without IPv6, the IPv6 field reads "unsupported or failed". ipapi.co may answer with a bot-protection challenge, in which case the ISP reads "failed" (the IPv4 address still comes from ipify.org). If it rate-limits you (HTTP 429), wait and try again
 - The page works from `file://`, but the clipboard is denied there (the failure is reported)
 - This is an educational demo; it does not encourage tracking or commercial use
 
