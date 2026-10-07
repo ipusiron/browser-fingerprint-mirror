@@ -161,14 +161,15 @@ const sample = () => ({
   canvas: { hash: 'aaaaaaaaaaaaaaaa', hash2: 'aaaaaaaaaaaaaaaa', sampleLen: 1234 },
   audio: { hash: 'bbbbbbbbbbbbbbbb' },
   plugins: { names: C.FIXED_PLUGIN_NAMES.slice(), count: 5, pdfViewerEnabled: true },
+  fonts: { tested: C.FONT_LIST.length, count: 2, names: ['Arial', 'Meiryo'] },
   network: { ipv4: '192.0.2.10', ipv6: null, fetchedAt: 1, status: 'ok' },
 });
 
-test('目録: 20行、研究の参考ビットは 2018 の Table 3 の PC/モバイルの列、IP は指紋IDに入れない', () => {
-  assert.equal(C.ATTRIBUTES.length, 20);
+test('目録: 21行、研究の参考ビットは 2018 の Table 3 の PC/モバイルの列、IP は指紋IDに入れない', () => {
+  assert.equal(C.ATTRIBUTES.length, 21);
   const keys = C.ATTRIBUTES.map((a) => a.key);
   assert.deepEqual(keys, ['ua', 'uaCh', 'uaHigh', 'platform', 'screen', 'language', 'intl', 'time', 'storage', 'cookie', 'dnt', 'gpc',
-    'hardware', 'media', 'webglVendor', 'webglRenderer', 'canvas', 'audio', 'plugins', 'network']);
+    'hardware', 'media', 'webglVendor', 'webglRenderer', 'canvas', 'audio', 'plugins', 'fonts', 'network']);
   const byKey = Object.fromEntries(C.ATTRIBUTES.map((a) => [a.key, a]));
   assert.equal(byKey.network.inId, false);
   for (const k of keys.filter((x) => x !== 'network')) assert.equal(byKey[k].inId, true, k);
@@ -201,7 +202,7 @@ test('研究の表: 17属性、H_M と件数と一意率', () => {
 
 test('attributeRows は目録の順に値を拾い、モバイルなら mobile の列を使う', () => {
   const rows = C.attributeRows(sample(), false);
-  assert.equal(rows.length, 20);
+  assert.equal(rows.length, 21);
   assert.equal(rows[0].key, 'ua');
   assert.equal(rows[0].value, UA.winChrome);
   assert.equal(rows[0].bits, 6.323);
@@ -346,6 +347,41 @@ test('parseIpCache: 期限内で形が正しければ返し、壊れていれば
   assert.equal(C.parseIpCache(JSON.stringify({ ipv4: 'nope' }), String(now - 1), now, ttl), null);
   assert.equal(C.parseIpCache(JSON.stringify({ isp: 'only isp' }), String(now - 1), now, ttl), null); // IP が無ければ使わない
   assert.equal(C.parseIpCache(JSON.stringify([1, 2]), String(now - 1), now, ttl), null);
+});
+
+// ---- フォント検出
+
+test('FONT_LIST は重複のない 60 件以上の名前。基準は monospace・sans-serif・serif', () => {
+  assert.ok(C.FONT_LIST.length >= 60, String(C.FONT_LIST.length));
+  assert.equal(new Set(C.FONT_LIST).size, C.FONT_LIST.length);
+  assert.deepEqual(C.FONT_BASES, ['monospace', 'sans-serif', 'serif']);
+  for (const name of ['Arial', 'Meiryo', 'MS Gothic', 'Hiragino Sans', 'Noto Sans JP', 'Roboto', 'Wingdings']) assert.ok(C.FONT_LIST.includes(name), name);
+});
+
+test('detectedFonts: どれか1つの基準と幅か高さが違えば「入っている」。基準と同じなら「入っていない」', () => {
+  const base = { monospace: [100, 80], 'sans-serif': [90, 80], serif: [95, 82] };
+  const measured = {
+    Arial: { monospace: [91, 80], 'sans-serif': [91, 80], serif: [91, 80] },
+    Meiryo: { monospace: [100, 80], 'sans-serif': [90, 80], serif: [96, 82] }, // serif だけ違う（実測の型）
+    'MS Gothic': { monospace: [100, 80], 'sans-serif': [100, 80], serif: [100, 80] }, // monospace だけ同じ
+    Roboto: { monospace: [100, 80], 'sans-serif': [90, 80], serif: [95, 82] }, // 全部同じ＝入っていない
+    'Hiragino Sans': { monospace: [100, 80.5], 'sans-serif': [90, 80], serif: [95, 82] }, // 高さだけ違う
+    Unknown: { monospace: [1, 1], 'sans-serif': [1, 1], serif: [1, 1] }, // 候補にない名前は無視
+  };
+  assert.deepEqual(C.detectedFonts(base, measured), ['Meiryo', 'MS Gothic', 'Arial', 'Hiragino Sans'].sort((a, b) => C.FONT_LIST.indexOf(a) - C.FONT_LIST.indexOf(b)));
+  assert.deepEqual(C.detectedFonts(base, {}), []);
+  assert.deepEqual(C.detectedFonts(null, null), []);
+  assert.deepEqual(C.detectedFonts(base, { Arial: { monospace: null } }), []);
+});
+
+test('fontsSummary は候補にある名前だけを数える', () => {
+  assert.deepEqual(C.fontsSummary(['Meiryo', 'Nope', 'Arial']), { tested: C.FONT_LIST.length, count: 2, names: ['Meiryo', 'Arial'] });
+  assert.deepEqual(C.fontsSummary(null), { tested: C.FONT_LIST.length, count: 0, names: [] });
+  const rows = C.attributeRows(sample(), false);
+  const fonts = rows.find((r) => r.key === 'fonts');
+  assert.equal(fonts.bits, 6.967);
+  assert.equal(fonts.inId, true);
+  assert.equal(C.attributeRows(sample(), true).find((r) => r.key === 'fonts').bits, 2.192);
 });
 
 // ---- 整形

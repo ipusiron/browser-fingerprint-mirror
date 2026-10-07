@@ -70,7 +70,7 @@ Instead, without sending anything, it shows what is visible, whether it is stabl
 - "Read again" recomputes and shows whether the ID stays the same (and which attributes changed)
 - The previous visit's fingerprint ID is stored in the browser and compared on the next visit ("same" or "different"), a hands-on demonstration of cookie-less tracking. "Clear previous record" removes it
 - Detected protections = Canvas randomization (two draws with different hashes), plugin list fixed by specification, WebGL name masked, reduced User-Agent, device memory hidden, DNT/GPC, and whether the time zone is UTC
-- Attribute list = the values of 20 items with their stability class, whether they are in the fingerprint ID, and the identifying power (bits) measured in research
+- Attribute list = the values of 21 items with their stability class, whether they are in the fingerprint ID, and the identifying power (bits) measured in research
 - Copy JSON (copies the displayed data as is; failures are reported where the clipboard is unavailable)
 
 ### Learn mode
@@ -114,7 +114,7 @@ Instead, without sending anything, it shows what is visible, whether it is stabl
 
 ### How the fingerprint ID is made
 
-1. `js/fp-collect.js` reads values from browser APIs (the 20 items in the catalog below)
+1. `js/fp-collect.js` reads values from browser APIs (the 21 items in the catalog below)
 2. The items marked "in the fingerprint ID" are turned into canonical JSON with keys in dictionary order
 3. SHA-256 of that JSON (implemented in pure JavaScript and checked against Node's `crypto` in tests) gives the fingerprint ID as its first 16 hex digits
 
@@ -144,11 +144,19 @@ Canvas is drawn twice; only the first hash enters the ID (the second is for dete
 | Canvas hash | Set by device and OS (hard to change) | included | 8.043 | 7.930 | Canvas |
 | Audio hash | Set by device and OS (hard to change) | included | — | — | — |
 | Plugins | Fixed by specification (no identifying power) | included | 10.281 | 0.206 | List of plugins |
+| Fonts (detected by width measurement) | Set by device and OS (hard to change) | included | 6.967 | 2.192 | Available fonts |
 | Network (IP) | Changes per connection | excluded | — | — | — |
 
 "Bits" is the Shannon entropy that Gómez-Boix, Laperdrix and Baudry (2018) measured on 2,067,942 fingerprints collected on a major French website.
 The PC column (1,816,776 fingerprints) or the mobile column (251,166) is chosen from the UA-CH `mobile` hint and similar signals.
 "—" marks attributes the study did not measure.
+
+### Font detection
+
+For each candidate font name (Windows, macOS, Linux, Japanese, monospace, symbol fonts), the width and height of a test string are measured with the font falling back to each of three generic families (monospace, sans-serif, serif). If any of the three differs from the generic family alone, the font is considered installed.
+Three baselines are needed because some fonts, such as Meiryo, have the same width as one generic family (a single baseline would miss them).
+`document.fonts.check()` is not used because it returns true even for names that are not installed.
+Fonts outside the candidate list cannot be detected, so the result is bounded by the size of the list.
 
 ### Identifying power per attribute measured in research
 

@@ -10,7 +10,7 @@ Browser Fingerprint Mirror is an educational static web tool that shows what a b
 
 Plain HTML/CSS/JavaScript, no build step, no dependencies. Scripts are classic (non-module) so the page also works from `file://`.
 
-- `js/fp-core.js` (`globalThis.FPCore`): pure functions only, no DOM or browser APIs. SHA-256 (pure JS), canonical JSON, OS/browser detection (UA-CH first, then UA order iPhone/iPad → CrOS → Android → Windows → Macintosh → Linux), attribute catalog `ATTRIBUTES` (20 rows: path, stability, `inId`, reference bits from Gómez-Boix et al. 2018 Table 3), `STUDY_TABLE`/`STUDY_META` (Panopticlick 2010, AmIUnique 2016, 2018 dataset), `fingerprintId()`, `diffAttributes()`, `detectProtections()` (canvas randomized, plugins fixed list, WebGL masked, reduced UA, deviceMemory hidden, DNT, GPC, UTC timezone), and validation of the ipify response and the localStorage cache.
+- `js/fp-core.js` (`globalThis.FPCore`): pure functions only, no DOM or browser APIs. SHA-256 (pure JS), canonical JSON, OS/browser detection (UA-CH first, then UA order iPhone/iPad → CrOS → Android → Windows → Macintosh → Linux), attribute catalog `ATTRIBUTES` (21 rows: path, stability, `inId`, reference bits from Gómez-Boix et al. 2018 Table 3), `STUDY_TABLE`/`STUDY_META` (Panopticlick 2010, AmIUnique 2016, 2018 dataset), `fingerprintId()`, `diffAttributes()`, font detection (`FONT_LIST`, `detectedFonts()` over three generic-family baselines), `detectProtections()` (canvas randomized, plugins fixed list, WebGL masked, reduced UA, deviceMemory hidden, DNT, GPC, UTC timezone), and validation of the ipify response and the localStorage cache.
 - `js/fp-collect.js` (`globalThis.FPCollect`): reads browser APIs into the data shape FPCore expects. `collect()` never contacts the network. `fetchNetwork(env)` is the only outbound call (ipify v4/v6) and is invoked only from the "fetch IP" button; responses are validated and cached in localStorage for 5 minutes.
 - `js/messages.js` (`globalThis.FPMessages`): UI strings, `t(key, params)`. Static strings are referenced from `index.html` via `data-i18n` / `data-i18n-attr`.
 - `script.js`: DOM only (tabs with ARIA + arrow keys, theme following `prefers-color-scheme` unless saved, fingerprint ID card, stability of repeated reads, last-visit ID in localStorage with a clear button, protections list, attribute cards, JSON copy with error toast).
@@ -19,7 +19,7 @@ Plain HTML/CSS/JavaScript, no build step, no dependencies. Scripts are classic (
 
 ### Data shape (collect())
 
-`{ timestamp, ua: { userAgent, platform, vendor, uaData, uaHigh }, screen, language, intl, time, storage, privacy: { cookieEnabled, doNotTrack, globalPrivacyControl }, hardware, media, webgl, canvas: { hash, hash2, sampleLen }, audio, plugins: { names, count, pdfViewerEnabled }, network }`
+`{ timestamp, ua: { userAgent, platform, vendor, uaData, uaHigh }, screen, language, intl, time, storage, privacy: { cookieEnabled, doNotTrack, globalPrivacyControl }, hardware, media, webgl, canvas: { hash, hash2, sampleLen }, audio, plugins: { names, count, pdfViewerEnabled }, fonts: { tested, count, names }, network }`
 
 The fingerprint ID is SHA-256 of the canonical JSON of the `inId` attributes (everything except `network`), first 16 hex digits.
 

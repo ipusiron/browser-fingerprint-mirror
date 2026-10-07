@@ -173,6 +173,7 @@
     { key: 'canvas', path: ['canvas', 'hash'], stability: 'hardware', inId: true, ref: { pc: 8.043, mobile: 7.930, attr: 'Canvas', source: SOURCE_2018 } },
     { key: 'audio', path: ['audio', 'hash'], stability: 'hardware', inId: true, ref: null },
     { key: 'plugins', path: ['plugins'], stability: 'fixedList', inId: true, ref: { pc: 10.281, mobile: 0.206, attr: 'List of plugins', source: SOURCE_2018 } },
+    { key: 'fonts', path: ['fonts'], stability: 'hardware', inId: true, ref: { pc: 6.967, mobile: 2.192, attr: 'Available fonts', source: SOURCE_2018 } },
     { key: 'network', path: ['network'], stability: 'volatile', inId: false, ref: null },
   ];
 
@@ -339,6 +340,47 @@
   }
 
   /* ======================================================================
+     フォント検出。候補の名前ごとに、3つの総称ファミリー（基準）にフォールバックさせて幅・高さを測り、
+     どれか1つでも基準と違えばそのフォントが入っていると判定する（FontFaceSet の check() は未インストールの名前にも true を返すので使えない）
+     ====================================================================== */
+  const FONT_BASES = ['monospace', 'sans-serif', 'serif'];
+  const FONT_LIST = [
+    // Windows
+    'Arial', 'Arial Black', 'Bahnschrift', 'Calibri', 'Cambria', 'Candara', 'Comic Sans MS', 'Consolas', 'Constantia', 'Corbel',
+    'Courier New', 'Georgia', 'Impact', 'Lucida Console', 'Segoe UI', 'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana',
+    'Meiryo', 'MS Gothic', 'MS PGothic', 'MS Mincho', 'MS PMincho', 'Yu Gothic', 'Yu Mincho', 'BIZ UDGothic', 'BIZ UDMincho', 'UD Digi Kyokasho N-R',
+    // macOS / iOS
+    'Helvetica Neue', 'Helvetica', 'Menlo', 'Monaco', 'Avenir', 'Gill Sans', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Hiragino Mincho ProN',
+    'Osaka', 'Apple SD Gothic Neo', 'PingFang SC', 'Klee',
+    // Linux / Android
+    'DejaVu Sans', 'DejaVu Serif', 'Liberation Sans', 'Liberation Mono', 'Noto Sans', 'Noto Sans CJK JP', 'Noto Sans JP', 'Noto Serif',
+    'Ubuntu', 'Cantarell', 'Roboto', 'IPAGothic', 'IPAPGothic', 'VL Gothic', 'Source Han Sans',
+    // 記号・等幅
+    'Wingdings', 'Symbol', 'Segoe UI Emoji', 'Fira Code', 'JetBrains Mono', 'Source Code Pro', 'Cascadia Code',
+  ];
+
+  // baseDims = { base: [w, h] }、measured = { family: { base: [w, h] } }。入っていると判定した名前を FONT_LIST の順で返す
+  function detectedFonts(baseDims, measured) {
+    const out = [];
+    for (const fam of FONT_LIST) {
+      const m = measured && measured[fam];
+      if (!m) continue;
+      const hit = FONT_BASES.some((b) => {
+        const d = m[b];
+        const base = baseDims && baseDims[b];
+        return Array.isArray(d) && Array.isArray(base) && (d[0] !== base[0] || d[1] !== base[1]);
+      });
+      if (hit) out.push(fam);
+    }
+    return out;
+  }
+
+  function fontsSummary(names) {
+    const list = Array.isArray(names) ? names.filter((n) => FONT_LIST.includes(n)) : [];
+    return { tested: FONT_LIST.length, count: list.length, names: list };
+  }
+
+  /* ======================================================================
      表示用の整形（DOM は使わない）
      ====================================================================== */
   function formatValue(v) {
@@ -356,5 +398,6 @@
     VERSION, sha256Hex, utf8Bytes, canonicalize, detectOS, detectBrowser, isReducedUA,
     ATTRIBUTES, STUDY_TABLE, STUDY_META, FIXED_PLUGIN_NAMES, attributeRows, stableSubset, fingerprintId, diffAttributes, isMobileHint,
     detectProtections, parseIpify, parseIpCache, validIp, formatValue, formatBits, getPath,
+    FONT_LIST, FONT_BASES, detectedFonts, fontsSummary,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -173,10 +173,10 @@
         <details class="learn-accordion">
           <summary class="learn-summary" data-i18n="learn.s2.title">🧮 指紋IDと安定性</summary>
           <div class="learn-body">
-            <p data-i18n="learn.s2.p1">「詳細・分析」の指紋IDは、安定な属性（IPと時刻を除く19項目）を正規化してSHA-256にした先頭16桁です。同じ環境なら、再読み込みでもシークレットモードでも同じ値になります。</p>
+            <p data-i18n="learn.s2.p1">「詳細・分析」の指紋IDは、安定な属性（IPと時刻を除く20項目）を正規化してSHA-256にした先頭16桁です。同じ環境なら、再読み込みでもシークレットモードでも同じ値になります。</p>
             <p data-i18n="learn.s2.p2">追跡に使えるかどうかは「珍しさ」だけでなく「安定しているか」で決まります。再読み込みのたびに変わる値は、どんなに珍しくても追跡には使えません。属性の一覧では、安定性を次の5つに分けています。</p>
             <ul>
-              <li data-i18n="learn.s2.li1">端末・OSで決まる（変えにくい）＝画面・ハードウェア・navigator.platform・WebGL・Canvas・Audio</li>
+              <li data-i18n="learn.s2.li1">端末・OSで決まる（変えにくい）＝画面・ハードウェア・navigator.platform・WebGL・Canvas・Audio・フォント</li>
               <li data-i18n="learn.s2.li2">設定で決まる（変えられる）＝言語・ロケール・タイムゾーン・ストレージの可否・Cookie・DNT・GPC・メディアクエリ</li>
               <li data-i18n="learn.s2.li3">更新で変わる＝User-Agent・UA Client Hints</li>
               <li data-i18n="learn.s2.li4">仕様で固定（識別力なし）＝プラグイン一覧</li>
