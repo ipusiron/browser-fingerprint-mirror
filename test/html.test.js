@@ -41,7 +41,7 @@ test('インラインのイベントハンドラーと style 属性がない', (
 
 test('スクリプトは計算部・収集部・文言・画面の順に読み込む（同一オリジンだけ）', () => {
   const srcs = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
-  assert.deepEqual(srcs, ['./js/fp-core.js', './js/fp-collect.js', './js/messages.js', './script.js']);
+  assert.deepEqual(srcs, ['./js/fp-core.js', './js/fp-collect.js', './js/messages.js', './js/i18n.js', './script.js']);
   assert.doesNotMatch(html, /<script[^>]+src="https?:\/\//);
   assert.doesNotMatch(html, /<link[^>]+href="https?:\/\//);
 });
@@ -60,7 +60,10 @@ test('タブとパネルが id で結ばれている（role・aria-controls・ar
 });
 
 test('主要な要素の id がそろっている', () => {
-  const ids = ['theme-toggle', 'simple-browser', 'simple-os', 'simple-os-source', 'simple-res', 'simple-ipv4', 'simple-ipv6', 'simple-isp', 'simple-lang', 'simple-tz',
+  assert.match(html, /<button id="lang-toggle" class="lang-toggle" type="button" aria-label="[^"]+" data-i18n="ui\.langButton" data-i18n-attr="aria-label:ui\.langLabel">EN<\/button>/);
+  assert.match(html, /<button id="theme-toggle" class="theme-toggle" type="button" aria-label="[^"]+" data-i18n-attr="aria-label:theme\.toLight">/);
+  assert.match(html, /<title data-i18n="ui\.docTitle">/);
+  const ids = ['theme-toggle', 'lang-toggle', 'simple-browser', 'simple-os', 'simple-os-source', 'simple-res', 'simple-ipv4', 'simple-ipv6', 'simple-isp', 'simple-lang', 'simple-tz',
     'simple-hw', 'simple-cookie-dnt', 'fetch-ip', 'net-status', 'refresh-adv', 'copy-json', 'fp-id', 'fp-stability', 'fp-last', 'clear-last', 'prot-list', 'adv-grid'];
   for (const id of ids) assert.ok(html.includes(`id="${id}"`), `id="${id}" がない`);
 });

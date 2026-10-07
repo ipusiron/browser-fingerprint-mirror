@@ -7,7 +7,10 @@ import { read } from './load.js';
 const FILES = [
   { path: 'js/fp-core.js', maxLine: 200, minLines: 250 },
   { path: 'js/fp-collect.js', maxLine: 200, minLines: 200 },
-  { path: 'js/messages.js', maxLine: 400, minLines: 120 },
+  { path: 'js/messages.js', maxLine: 400, minLines: 300 },
+  { path: 'js/i18n.js', maxLine: 160, minLines: 40 },
+  { path: 'test/i18n.test.js', maxLine: 260, minLines: 80 },
+  { path: 'test/readme.test.js', maxLine: 260, minLines: 150 },
   { path: 'script.js', maxLine: 200, minLines: 250 },
   { path: 'style.css', maxLine: 400, minLines: 150 },
   { path: 'index.html', maxLine: 400, minLines: 150 },
@@ -75,7 +78,7 @@ test('外部への接続は収集部の fetchNetwork だけ。URL は CSP の co
 });
 
 test('改行コードは LF（リポジトリーの既定）', () => {
-  for (const f of ['js/fp-core.js', 'js/fp-collect.js', 'js/messages.js', 'script.js', 'style.css', 'index.html', 'test/core.test.js']) {
+  for (const f of ['js/fp-core.js', 'js/fp-collect.js', 'js/messages.js', 'js/i18n.js', 'script.js', 'style.css', 'index.html', 'README.md', 'README.en.md', 'test/core.test.js']) {
     assert.equal(read(f).includes('\r'), false, `${f} に CR がある`);
   }
 });

@@ -19,6 +19,7 @@
         <p class="subtitle" data-i18n="ui.subtitle">あなたのブラウザーに「映っている」指紋情報を可視化する</p>
       </div>
       <div class="header-actions">
+        <button id="lang-toggle" class="lang-toggle" type="button" aria-label="英語に切り替える" data-i18n="ui.langButton" data-i18n-attr="aria-label:ui.langLabel">EN</button>
         <button id="theme-toggle" class="theme-toggle" type="button" aria-label="ライトモードに切替" data-i18n-attr="aria-label:theme.toLight">
           <span class="theme-icon" aria-hidden="true">☀️</span>
         </button>
@@ -249,8 +250,8 @@
               <li><a href="https://browserleaks.com/" target="_blank" rel="noopener noreferrer">BrowserLeaks</a><span data-i18n="learn.s6.li5"> - APIごとの深掘り</span></li>
               <li><a href="https://www.torproject.org/" target="_blank" rel="noopener noreferrer">Tor Project</a><span data-i18n="learn.s6.li6"> - 匿名性重視のブラウザー</span></li>
               <li><a href="https://coveryourtracks.eff.org/static/browser-uniqueness.pdf" target="_blank" rel="noopener noreferrer">Eckersley 2010 "How Unique Is Your Web Browser?"</a><span data-i18n="learn.s6.li7"> - Panopticlickの論文（PDF）</span></li>
-              <li><a href="https://hal.science/hal-01285470" target="_blank" rel="noopener noreferrer" data-i18n="learn.s6.a8">Laperdrixほか 2016 "Beauty and the Beast"</a><span data-i18n="learn.s6.li8"> - AmIUniqueの論文（HAL）</span></li>
-              <li><a href="https://hal.inria.fr/hal-01718234" target="_blank" rel="noopener noreferrer" data-i18n="learn.s6.a9">Gómez-Boixほか 2018 "Hiding in the Crowd"</a><span data-i18n="learn.s6.li9"> - 約207万件の指紋の分析（HAL）</span></li>
+              <li><a href="https://hal.science/hal-01285470" target="_blank" rel="noopener noreferrer" data-i18n="learn.s6.a8">Laperdrixほか（2016）"Beauty and the Beast"</a><span data-i18n="learn.s6.li8"> - AmIUniqueの論文（HAL）</span></li>
+              <li><a href="https://hal.inria.fr/hal-01718234" target="_blank" rel="noopener noreferrer" data-i18n="learn.s6.a9">Gómez-Boixほか（2018）"Hiding in the Crowd"</a><span data-i18n="learn.s6.li9"> - 約207万件の指紋の分析（HAL）</span></li>
               <li><a href="https://privacysandbox.google.com/protections/user-agent" target="_blank" rel="noopener noreferrer">User-Agent reduction (Privacy Sandbox)</a><span data-i18n="learn.s6.li10"> - Chromeの削減されたUser-Agentの説明</span></li>
               <li><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/" target="_blank" rel="noopener noreferrer">Brave "Fingerprinting defenses 2.0"</a><span data-i18n="learn.s6.li11"> - farblingの説明</span></li>
               <li><a href="https://github.com/ipusiron/browser-permission-radar" target="_blank" rel="noopener noreferrer">Browser Permission Radar (Day092)</a><span data-i18n="learn.s6.li12"> - ブラウザーの権限の露出を見るツール</span></li>
@@ -270,6 +271,7 @@
   <script src="./js/fp-core.js"></script>
   <script src="./js/fp-collect.js"></script>
   <script src="./js/messages.js"></script>
+  <script src="./js/i18n.js"></script>
   <script src="./script.js"></script>
 </body>
 </html>

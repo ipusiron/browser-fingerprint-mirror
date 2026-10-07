@@ -68,6 +68,10 @@ a{color:var(--accent)}
   .header h1{font-size:22px}
 }
 
+/* 言語切替ボタン */
+.lang-toggle{background:var(--card);border:1px solid var(--border);color:var(--fg);padding:10px 14px;min-width:44px;min-height:44px;border-radius:10px;cursor:pointer;font:inherit;font-size:14px;font-weight:600}
+.lang-toggle:hover{background:var(--emph)}
+
 /* テーマ切替ボタン */
 .theme-toggle{background:var(--card);border:1px solid var(--border);color:var(--fg);padding:10px 14px;min-width:44px;min-height:44px;border-radius:10px;cursor:pointer;font-size:20px;transition:transform 0.2s}
 .theme-toggle:hover{transform:scale(1.05)}

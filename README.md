@@ -41,6 +41,8 @@ hub: true
 ---
 -->
 
+[English](README.en.md) · 日本語
+
 # Browser Fingerprint Mirror - ブラウザー指紋ミラー
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/ipusiron/browser-fingerprint-mirror?style=social)
@@ -121,6 +123,7 @@ hub: true
 ### その他
 
 - ダーク／ライトのテーマ。保存した選択がなければOSの設定に従う
+- 日本語と英語の画面（`?lang=ja|en`、言語ボタン、またはブラウザーの言語）
 - キーボードだけで操作できる（タブは矢印キー・Home・End）。文字と背景のコントラストは4.5:1以上
 - スマートフォン幅（320px）でも横スクロールしない
 
@@ -142,7 +145,7 @@ hub: true
 
 | 領域 | 内容 |
 |---|---|
-| ヘッダー | タイトル、テーマ切替 |
+| ヘッダー | タイトル、言語切替、テーマ切替 |
 | タブ | シンプル／詳細・分析／座学 |
 | シンプル | ブラウザー・システム、ネットワーク（取得ボタンつき）、地域・言語、ハードウェア、プライバシー設定のカード |
 | 詳細・分析 | 操作（もう一度読む・JSONコピー）、指紋IDのカード（安定性・前回の訪問）、保護の検出、属性の一覧、プライバシー／免責 |
@@ -194,7 +197,7 @@ PC（1,816,776件）とモバイル（251,166件）の列を、UA-CHの`mobile`�
 
 3つの研究の表（bits／正規化エントロピー）です。正規化エントロピーは、全部の指紋が一意だったときの最大値H_M＝log2（指紋の数）で割った値です。
 
-| 属性 | Panopticlick 2010 | AmIUnique 2016 | 2018 全体 | 2018 モバイル | 2018 PC |
+| 属性 | Panopticlick 2010 | AmIUnique 2016 | 2018年・全体 | 2018年・モバイル | 2018年・PC |
 |---|---|---|---|---|---|
 | Platform | — | 2.310／0.137 | 1.200／0.057 | 2.274／0.127 | 0.489／0.024 |
 | Do Not Track | — | 0.944／0.056 | 1.919／0.091 | 1.102／0.061 | 1.922／0.092 |
@@ -331,16 +334,22 @@ browser-fingerprint-mirror/
 ├── AGENTS.md                # 開発ガイド（Codex CLI用）
 ├── CLAUDE.md                # 開発ガイド（Claude Code用）
 ├── LICENSE                  # MITライセンス
+├── README.en.md             # プロジェクト説明（英語版）
 ├── README.md                # プロジェクト説明（本ファイル）
 ├── assets/                  # スクリーンショット
-│   ├── screenshot.png       # シンプルモード
-│   ├── screenshot2.png      # 詳細・分析モード
-│   └── screenshot3.png      # 座学モード（ダーク）
+│   ├── en/                  # 英語の画面
+│   │   ├── screenshot.png   # シンプルモード
+│   │   ├── screenshot2.png  # 詳細・分析モード
+│   │   └── screenshot3.png  # 座学モード（ダーク）
+│   ├── screenshot.png       # シンプルモード（日本語）
+│   ├── screenshot2.png      # 詳細・分析モード（日本語）
+│   └── screenshot3.png      # 座学モード（ダーク、日本語）
 ├── index.html               # 画面の構造（CSP・タブ・各モード）
-├── js/                      # 計算部・収集部・文言
+├── js/                      # 計算部・収集部・文言・言語
 │   ├── fp-collect.js        # ブラウザーのAPIから値を集める。IPの取得はここだけ
 │   ├── fp-core.js           # 純粋関数（SHA-256・推定・指紋ID・保護の検出・検証・研究の表）
-│   └── messages.js          # 画面の文言
+│   ├── i18n.js              # 言語の決定と静的な文言の差し替え
+│   └── messages.js          # 画面の文言（日本語・英語）
 ├── package.json             # npm test（node --test）の定義。依存なし
 ├── script.js                # 画面側（DOMの組み立てと操作）
 ├── style.css                # スタイル（ダーク／ライト）
@@ -349,6 +358,7 @@ browser-fingerprint-mirror/
     ├── core.test.js         # 計算部（SHA-256・推定・指紋ID・保護の検出・検証）
     ├── format.test.js       # ファイルの形式（minifyなし・日本語リテラルなし・接続先）
     ├── html.test.js         # index.htmlの静的検証（CSP・ARIA・id）
+    ├── i18n.test.js         # 辞書のキー・HTMLと辞書の一致・言語の決定
     ├── load.js              # 画面と同じスクリプトをテストに読み込む
     └── readme.test.js       # READMEの表と構造をコードから検証
 ```
@@ -364,7 +374,8 @@ npm test
 - Node 22以上で動き、依存パッケージはない（`node --test`）
 - 計算部のテスト（SHA-256はNodeの`crypto`と既知のベクターで照合、OS・ブラウザーの推定の対照表、指紋IDの安定性、保護の検出、外部APIとキャッシュの検証）
 - HTML・配色・形式のテスト（CSP、ARIA、文字と背景のコントラスト、minifyの検出、日本語リテラルの禁止、接続先の制限）
-- READMEのテスト（属性の目録と研究の表の数値をコードから再計算、ディレクトリー構造の全ファイル、スクリーンショットの実在、表記）
+- 言語のテスト（日英の辞書のキーの一致、HTMLの文言と辞書の一致、英語に日本語が残っていないこと）
+- READMEのテスト（属性の目録と研究の表の数値をコードから再計算、ディレクトリー構造の全ファイル、スクリーンショットの実在、表記、日英の見出しの対応）
 - GitHub Actionsがpushとpull_requestで自動実行する
 
 ---

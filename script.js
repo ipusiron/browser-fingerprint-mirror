@@ -7,6 +7,7 @@
   const C = globalThis.FPCore;
   const COL = globalThis.FPCollect;
   const M = globalThis.FPMessages;
+  const I18N = globalThis.FPI18n;
   const t = M.t;
 
   const $ = (sel) => document.querySelector(sel);
@@ -24,7 +25,7 @@
   const DASH = String.fromCodePoint(0x2014);
   const SLASH = String.fromCodePoint(0xff0f);
 
-  const state = { data: null, firstData: null, ids: [], network: null, lastVisit: null, building: false };
+  const state = { data: null, firstData: null, ids: [], network: null, lastVisit: null, building: false, previousVisit: null, netStatus: null };
 
   /* ---------- localStorage（使えない環境でも落ちない） ---------- */
   function lsGet(key) {
@@ -171,6 +172,11 @@
     $('#simple-isp').textContent = isp;
   }
 
+  function setNetStatus(key, params) {
+    state.netStatus = key ? { key, params: params || null } : null;
+    $('#net-status').textContent = key ? t(key, params) : '';
+  }
+
   async function onFetchIp() {
     const btn = $('#fetch-ip');
     const status = $('#net-status');
@@ -185,16 +191,16 @@
       if (state.data) state.data.network = net;
       fillNetwork(net);
       const at = new Date(net.fetchedAt).toLocaleTimeString();
-      if (net.status === 'cache') status.textContent = t('net.statusCache', { at });
-      else if (net.status === 'rateLimited') status.textContent = t('net.statusRateLimited');
-      else if (net.status === 'noisp') status.textContent = t('net.statusNoisp');
-      else if (net.status === 'failed') status.textContent = t('net.statusFailed');
-      else status.textContent = t('net.statusOk', { at });
+      if (net.status === 'cache') setNetStatus('net.statusCache', { at });
+      else if (net.status === 'rateLimited') setNetStatus('net.statusRateLimited');
+      else if (net.status === 'noisp') setNetStatus('net.statusNoisp');
+      else if (net.status === 'failed') setNetStatus('net.statusFailed');
+      else setNetStatus('net.statusOk', { at });
       renderAttributes();
     } catch (e) {
       state.network = null;
       fillNetwork({ status: 'failed' });
-      status.textContent = t('net.statusFailed');
+      setNetStatus('net.statusFailed');
     } finally {
       btn.disabled = false;
     }
@@ -237,7 +243,7 @@
     const el = $('#fp-last');
     const id = currentId();
     if (!previous) {
-      el.textContent = state.lastVisit === 'unavailable' ? t('adv.lastUnavailable') : t('adv.lastNone');
+      el.textContent = state.lastVisit === 'unavailable' ? t('adv.lastUnavailable') : state.lastVisit === 'cleared' ? t('adv.lastCleared') : t('adv.lastNone');
       return;
     }
     const at = new Date(previous.at).toLocaleString();
@@ -255,6 +261,8 @@
 
   function clearLastVisit() {
     lsRemove(LAST_VISIT_KEY);
+    state.previousVisit = null;
+    state.lastVisit = 'cleared';
     $('#fp-last').textContent = t('adv.lastCleared');
     showToast(t('adv.lastCleared'), 'success', $('#clear-last'));
   }
@@ -329,7 +337,8 @@
       state.data = data;
       if (first || !state.firstData) state.firstData = data;
       state.ids.push(C.fingerprintId(data).id);
-      const previous = first ? readLastVisit() : null;
+      const previous = first ? readLastVisit() : state.previousVisit;
+      if (first) state.previousVisit = previous;
       renderAdvanced(previous);
       if (first) saveLastVisit();
       else showToast(t('toast.recalcDone'), 'success', btn);
@@ -389,11 +398,31 @@
     wrap.appendChild(table);
   }
 
+  /* ---------- 言語 ---------- */
+  function rerenderText() {
+    applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+    renderStudyTable();
+    if (state.netStatus) setNetStatus(state.netStatus.key, state.netStatus.params);
+    if (state.data) {
+      fillSimple(state.data);
+      renderAdvanced(state.previousVisit);
+    }
+  }
+
+  function toggleLanguage() {
+    const next = M.getLanguage() === 'ja' ? 'en' : 'ja';
+    I18N.use(next, document);
+    I18N.save(next);
+    rerenderText();
+  }
+
   /* ---------- 初期化 ---------- */
   function init() {
+    I18N.use(I18N.initialLanguage(location.search, I18N.readSaved(), navigator.languages), document);
     initTheme();
     initTabs();
     renderStudyTable();
+    $('#lang-toggle').addEventListener('click', toggleLanguage);
     $('#theme-toggle').addEventListener('click', toggleTheme);
     $('#fetch-ip').addEventListener('click', onFetchIp);
     $('#refresh-adv').addEventListener('click', () => { build(false); });

@@ -222,3 +222,87 @@ test('関連ツールの名前は各 README の YAML の title どおり', () =>
   assert.ok(readme.includes('Browser Permission Radar（Day092）'));
   assert.ok(JAPANESE.test(readme));
 });
+
+// ---- 英語版の README（要約にせず、同じ節をそろえる）
+
+const readmeEn = read('README.en.md');
+
+test('日本語版と英語版で、見出しの数・順・階層がそろっている', () => {
+  const levels = (text) => [...text.matchAll(/^(#{1,3}) /gm)].map((m) => m[1].length);
+  const ja = levels(readme);
+  const en = levels(readmeEn);
+  assert.ok(ja.length >= 25, `見出しが ${ja.length} 個しかない`);
+  assert.deepEqual(en, ja, `見出しの数か階層が違う（ja ${ja.length} / en ${en.length}）`);
+});
+
+test('英語版に日本語の本文が残っていない', () => {
+  const body = readmeEn.split('\n').filter((line) => !line.includes('README.md') && !line.includes('日本語')).join('\n');
+  const hits = [...body.matchAll(/[぀-ヿ一-鿿]+/g)].map((m) => m[0]);
+  assert.deepEqual(hits, [], `日本語が残っている: ${hits.slice(0, 5).join(' / ')}`);
+});
+
+test('両方の README が互いにリンクし、YAML メタデータは日本語版だけに置く', () => {
+  assert.match(readme, /^\[English\]\(README\.en\.md\) · 日本語$/m);
+  assert.match(readmeEn, /^English · \[日本語\]\(README\.md\)$/m);
+  assert.doesNotMatch(readmeEn, /^id: day077$/m);
+  assert.ok(readmeEn.includes('**Day077 - 100 Security Tools with Generative AI**'));
+  assert.ok(readmeEn.includes('https://akademeia.info/?page_id=42163'));
+  assert.doesNotMatch(readmeEn, /page_id=44607/);
+});
+
+test('英語版の属性の目録は、計算部と英語の辞書から作った値と一致する', () => {
+  setLanguage('en');
+  const rows = [...readmeEn.matchAll(/^\| (.+?) \| (.+?) \| (included|excluded) \| (—|\d\.\d{3}|\d{2}\.\d{3}) \| (—|\d\.\d{3}|\d{2}\.\d{3}) \| (.+?) \|$/gm)];
+  assert.equal(rows.length, C.ATTRIBUTES.length);
+  C.ATTRIBUTES.forEach((a, i) => {
+    const [, name, stab, inId, pc, mobile, attr] = rows[i];
+    assert.equal(name, t('attr.' + a.key), `${i}行目の属性名`);
+    assert.equal(stab, t('stab.' + a.stability), `${a.key} の安定性`);
+    assert.equal(inId, a.inId ? 'included' : 'excluded', `${a.key} の指紋ID`);
+    assert.equal(pc, a.ref ? a.ref.pc.toFixed(3) : '—', `${a.key} の PC`);
+    assert.equal(mobile, a.ref ? a.ref.mobile.toFixed(3) : '—', `${a.key} のモバイル`);
+    assert.equal(attr, a.ref ? a.ref.attr : '—', `${a.key} の研究の属性名`);
+  });
+  setLanguage('ja');
+});
+
+test('英語版の研究の表も計算部と一致する', () => {
+  const fmt = (v) => (v === null ? '—' : v[0].toFixed(3) + '／' + v[1].toFixed(3));
+  const rows = [...readmeEn.matchAll(/^\| ([A-Za-z][A-Za-z /-]+?) \| (—|[\d.]+／[\d.]+) \| ([\d.]+／[\d.]+) \| ([\d.]+／[\d.]+) \| ([\d.]+／[\d.]+) \| ([\d.]+／[\d.]+) \|$/gm)];
+  assert.equal(rows.length, C.STUDY_TABLE.length);
+  C.STUDY_TABLE.forEach((r, i) => {
+    const [, attr, p2010, a2016, all2018, mobile2018, pc2018] = rows[i];
+    assert.equal(attr, r.attr);
+    assert.deepEqual([p2010, a2016, all2018, mobile2018, pc2018], [fmt(r.p2010), fmt(r.a2016), fmt(r.all2018), fmt(r.mobile2018), fmt(r.pc2018)], r.attr);
+  });
+  const m = C.STUDY_META;
+  const cols = ['p2010', 'a2016', 'all2018', 'mobile2018', 'pc2018'];
+  assert.ok(readmeEn.includes('| H_M (all unique) | ' + cols.map((c) => m.hm[c].toFixed(3)).join(' | ') + ' |'));
+  assert.ok(readmeEn.includes('| Number of fingerprints | ' + cols.map((c) => m.count[c].toLocaleString('en-US')).join(' | ') + ' |'));
+  assert.ok(readmeEn.includes('| Share of unique fingerprints | ' + cols.map((c) => m.unique[c] + '%').join(' | ') + ' |'));
+  assert.match(readmeEn, /about 1,000 requests per day/);
+  for (const name of C.FIXED_PLUGIN_NAMES) assert.ok(readmeEn.includes(name), name);
+});
+
+test('英語版の画像は assets/en/ にあってすべて実在し、assets/en/ の PNG は英語版から参照されているものだけ', () => {
+  const imgs = [...readmeEn.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]);
+  const local = imgs.filter((u) => !u.startsWith('http'));
+  assert.equal(local.length, 3);
+  for (const rel of local) {
+    assert.ok(rel.startsWith('assets/en/'), `英語版は英語の画面を使う: ${rel}`);
+    assert.ok(fs.existsSync(new URL(rel, ROOT)), `${rel} がない`);
+    assert.ok(fs.statSync(new URL(rel, ROOT)).size <= 300 * 1024, `${rel} が 300KB を超える`);
+  }
+  const pngs = fs.readdirSync(new URL('assets/en/', ROOT)).filter((f) => f.endsWith('.png'));
+  for (const f of pngs) assert.ok(local.includes(`assets/en/${f}`), `assets/en/${f} が英語版から参照されていない`);
+});
+
+test('英語版のディレクトリー構造にも全ファイルが載っていて、全行に説明があり、日英で名前がそろう', () => {
+  const tree = readmeEn.match(/## 📁 Directory structure\n\n```\n([\s\S]*?)```/);
+  assert.ok(tree, '英語版にディレクトリー構造がない');
+  const lines = tree[1].trim().split('\n');
+  for (const line of lines.slice(1)) assert.match(line, / # .+$/, `説明のない行: ${line}`);
+  const jaTree = readme.match(/## 📁 ディレクトリー構造\n\n```\n([\s\S]*?)```/)[1].trim().split('\n');
+  const names = (ls) => ls.map((l) => l.replace(/^[│├└─\s]+/, '').split(/\s+#/)[0].trim());
+  assert.deepEqual(names(lines), names(jaTree), '日英のツリーのファイル名がそろっていない');
+});
