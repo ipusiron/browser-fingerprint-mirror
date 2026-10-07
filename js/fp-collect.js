@@ -11,7 +11,6 @@
   const CACHE_TTL_MS = 5 * 60 * 1000;
   const URL_V4 = 'https://api4.ipify.org?format=json';
   const URL_V6 = 'https://api6.ipify.org?format=json';
-  const URL_GEO = 'https://ipapi.co/json/';
   const HIGH_ENTROPY_HINTS = ['architecture', 'bitness', 'model', 'platformVersion', 'uaFullVersion', 'fullVersionList', 'wow64', 'formFactors'];
 
   function matches(query) {
@@ -237,6 +236,33 @@
     return { names, count: names.length, pdfViewerEnabled: typeof nav.pdfViewerEnabled === 'boolean' ? nav.pdfViewerEnabled : null };
   }
 
+  // フォント: 候補ごとに3つの基準にフォールバックさせて幅・高さを測り、基準と違えば「入っている」。判定は計算部
+  function collectFonts() {
+    try {
+      const doc = root.document;
+      const span = doc.createElement('span');
+      span.style.cssText = 'position:absolute;left:-9999px;top:0;font-size:72px;white-space:nowrap;line-height:normal';
+      span.textContent = 'mmmmmmmmmmlli' + String.fromCharCode(0x3042, 0x6f22);
+      doc.body.appendChild(span);
+      const measure = (ff) => {
+        span.style.fontFamily = ff;
+        const r = span.getBoundingClientRect();
+        return [Math.round(r.width * 100) / 100, Math.round(r.height * 100) / 100];
+      };
+      const baseDims = {};
+      for (const b of C.FONT_BASES) baseDims[b] = measure(b);
+      const measured = {};
+      for (const fam of C.FONT_LIST) {
+        measured[fam] = {};
+        for (const b of C.FONT_BASES) measured[fam][b] = measure('"' + fam + '",' + b);
+      }
+      span.remove();
+      return C.fontsSummary(C.detectedFonts(baseDims, measured));
+    } catch (e) {
+      return null;
+    }
+  }
+
   // 全部を集める。network は呼び出し側が持っている値をそのまま載せる（ここでは外部へ出ない）
   async function collect(options) {
     const opt = options || {};
@@ -258,11 +284,12 @@
       canvas: collectCanvas(),
       audio,
       plugins: collectPlugins(),
+      fonts: collectFonts(),
       network: opt.network || null,
     };
   }
 
-  // IP/ISP の取得。押したときだけ呼ぶ。env = { fetchFn, now, getItem, setItem }
+  // IP の取得（ipify.org）。押したときだけ呼ぶ。env = { fetchFn, now, getItem, setItem }
   async function fetchNetwork(env) {
     const cached = C.parseIpCache(env.getItem(CACHE_KEY), env.getItem(CACHE_TIME_KEY), env.now, CACHE_TTL_MS);
     if (cached) return { ...cached, status: 'cache' };
@@ -270,32 +297,13 @@
     const [v4, v6] = await Promise.allSettled([json(URL_V4), json(URL_V6)]);
     const ipv4 = v4.status === 'fulfilled' ? C.parseIpify(v4.value) : null;
     const ipv6 = v6.status === 'fulfilled' ? C.parseIpify(v6.value) : null;
-    let isp = null;
-    let asn = null;
-    let status = 'ok';
-    try {
-      const r = await env.fetchFn(URL_GEO);
-      if (r.ok) {
-        const p = C.parseIpapi(await r.json());
-        if (p) {
-          isp = p.isp;
-          asn = p.asn;
-        } else {
-          status = 'noisp';
-        }
-      } else {
-        status = r.status === 429 ? 'rateLimited' : 'failed';
-      }
-    } catch (e) {
-      status = 'failed';
-    }
-    const net = { ipv4, ipv6, isp, asn, fetchedAt: env.now, status };
-    if (ipv4 || ipv6 || isp) {
-      env.setItem(CACHE_KEY, JSON.stringify({ ipv4, ipv6, isp, asn }));
+    const net = { ipv4, ipv6, fetchedAt: env.now, status: ipv4 || ipv6 ? 'ok' : 'failed' };
+    if (ipv4 || ipv6) {
+      env.setItem(CACHE_KEY, JSON.stringify({ ipv4, ipv6 }));
       env.setItem(CACHE_TIME_KEY, String(env.now));
     }
     return net;
   }
 
-  root.FPCollect = { collect, fetchNetwork, collectUA, collectWebGL, collectCanvas, collectAudio, collectPlugins, CACHE_KEY, CACHE_TIME_KEY, CACHE_TTL_MS };
+  root.FPCollect = { collect, fetchNetwork, collectUA, collectWebGL, collectCanvas, collectAudio, collectPlugins, collectFonts, CACHE_KEY, CACHE_TIME_KEY, CACHE_TTL_MS };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

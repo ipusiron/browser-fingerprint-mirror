@@ -69,10 +69,10 @@ test('計算部は DOM・ブラウザーの API を使わない。収集部と�
   assert.doesNotMatch(script, /Math\.random/);
 });
 
-test('外部への接続は収集部の fetchNetwork だけ。URL は CSP の connect-src と同じ3ホスト', () => {
+test('外部への接続は収集部の fetchNetwork だけ。URL は CSP の connect-src と同じ2ホスト（ipify）', () => {
   const collect = read('js/fp-collect.js');
   const urls = [...collect.matchAll(/https:\/\/[a-z0-9.-]+/g)].map((m) => m[0]);
-  assert.deepEqual([...new Set(urls)].sort(), ['https://api4.ipify.org', 'https://api6.ipify.org', 'https://ipapi.co']);
+  assert.deepEqual([...new Set(urls)].sort(), ['https://api4.ipify.org', 'https://api6.ipify.org']);
   assert.doesNotMatch(read('script.js'), /https?:\/\//);
   assert.doesNotMatch(read('js/fp-core.js'), /https?:\/\//);
 });

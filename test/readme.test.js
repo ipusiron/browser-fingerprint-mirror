@@ -113,17 +113,17 @@ test('保護の検出の規則の表は7行で、固定プラグインの5件の
   for (const name of C.FIXED_PLUGIN_NAMES) assert.ok(section[1].includes(name), `${name} がない`);
 });
 
-test('外部 API の規約を正しく書く（1日あたり約1,000リクエスト、ログに残る。「月1,000」と書かない）', () => {
-  assert.match(readme, /1日あたり約1,000リクエスト/);
-  assert.match(readme, /ログに残る/);
-  assert.doesNotMatch(readme, /月1,000/);
+test('外部 API は ipify.org だけ（ipapi.co を書かない）。「外部送信しません」と書かない', () => {
+  assert.match(readme, /ipify\.org/);
+  assert.doesNotMatch(readme, /ipapi/);
   assert.doesNotMatch(readme, /外部送信しません|完全クライアントサイド/);
+  for (const f of ['index.html', 'js/messages.js', 'js/fp-collect.js', 'CLAUDE.md', 'AGENTS.md', 'README.en.md']) assert.doesNotMatch(read(f), /ipapi/, f);
 });
 
 test('README の画像がすべて実在し、assets/ の PNG は README から参照されているものだけ。1枚ごとにキャプションがある', () => {
   const imgs = [...readme.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]);
   const local = imgs.filter((u) => !u.startsWith('http'));
-  assert.equal(local.length, 3, `画像の参照が ${local.length} 件`);
+  assert.equal(local.length, 4, `画像の参照が ${local.length} 件`);
   for (const rel of local) assert.ok(fs.existsSync(new URL(rel, ROOT)), `${rel} がない`);
   const pngs = fs.readdirSync(new URL('assets/', ROOT)).filter((f) => f.endsWith('.png'));
   for (const f of pngs) assert.ok(local.includes(`assets/${f}`), `assets/${f} が README から参照されていない`);
@@ -280,14 +280,13 @@ test('英語版の研究の表も計算部と一致する', () => {
   assert.ok(readmeEn.includes('| H_M (all unique) | ' + cols.map((c) => m.hm[c].toFixed(3)).join(' | ') + ' |'));
   assert.ok(readmeEn.includes('| Number of fingerprints | ' + cols.map((c) => m.count[c].toLocaleString('en-US')).join(' | ') + ' |'));
   assert.ok(readmeEn.includes('| Share of unique fingerprints | ' + cols.map((c) => m.unique[c] + '%').join(' | ') + ' |'));
-  assert.match(readmeEn, /about 1,000 requests per day/);
   for (const name of C.FIXED_PLUGIN_NAMES) assert.ok(readmeEn.includes(name), name);
 });
 
 test('英語版の画像は assets/en/ にあってすべて実在し、assets/en/ の PNG は英語版から参照されているものだけ', () => {
   const imgs = [...readmeEn.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]);
   const local = imgs.filter((u) => !u.startsWith('http'));
-  assert.equal(local.length, 3);
+  assert.equal(local.length, 4);
   for (const rel of local) {
     assert.ok(rel.startsWith('assets/en/'), `英語版は英語の画面を使う: ${rel}`);
     assert.ok(fs.existsSync(new URL(rel, ROOT)), `${rel} がない`);

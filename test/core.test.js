@@ -161,14 +161,15 @@ const sample = () => ({
   canvas: { hash: 'aaaaaaaaaaaaaaaa', hash2: 'aaaaaaaaaaaaaaaa', sampleLen: 1234 },
   audio: { hash: 'bbbbbbbbbbbbbbbb' },
   plugins: { names: C.FIXED_PLUGIN_NAMES.slice(), count: 5, pdfViewerEnabled: true },
-  network: { ipv4: '192.0.2.10', ipv6: null, isp: 'Example ISP Inc.', asn: 'AS64496', fetchedAt: 1 },
+  fonts: { tested: C.FONT_LIST.length, count: 2, names: ['Arial', 'Meiryo'] },
+  network: { ipv4: '192.0.2.10', ipv6: null, fetchedAt: 1, status: 'ok' },
 });
 
-test('目録: 20行、研究の参考ビットは 2018 の Table 3 の PC/モバイルの列、IP は指紋IDに入れない', () => {
-  assert.equal(C.ATTRIBUTES.length, 20);
+test('目録: 21行、研究の参考ビットは 2018 の Table 3 の PC/モバイルの列、IP は指紋IDに入れない', () => {
+  assert.equal(C.ATTRIBUTES.length, 21);
   const keys = C.ATTRIBUTES.map((a) => a.key);
   assert.deepEqual(keys, ['ua', 'uaCh', 'uaHigh', 'platform', 'screen', 'language', 'intl', 'time', 'storage', 'cookie', 'dnt', 'gpc',
-    'hardware', 'media', 'webglVendor', 'webglRenderer', 'canvas', 'audio', 'plugins', 'network']);
+    'hardware', 'media', 'webglVendor', 'webglRenderer', 'canvas', 'audio', 'plugins', 'fonts', 'network']);
   const byKey = Object.fromEntries(C.ATTRIBUTES.map((a) => [a.key, a]));
   assert.equal(byKey.network.inId, false);
   for (const k of keys.filter((x) => x !== 'network')) assert.equal(byKey[k].inId, true, k);
@@ -201,7 +202,7 @@ test('研究の表: 17属性、H_M と件数と一意率', () => {
 
 test('attributeRows は目録の順に値を拾い、モバイルなら mobile の列を使う', () => {
   const rows = C.attributeRows(sample(), false);
-  assert.equal(rows.length, 20);
+  assert.equal(rows.length, 21);
   assert.equal(rows[0].key, 'ua');
   assert.equal(rows[0].value, UA.winChrome);
   assert.equal(rows[0].bits, 6.323);
@@ -323,33 +324,128 @@ test('detectProtections: Canvas が取れない・WebGL が取れない・Safari
 
 // ---- 外部 API の応答とキャッシュ
 
-test('parseIpify・parseIpapi は形を検証し、制御文字を落とし、長さを切る', () => {
+test('parseIpify は形を検証する（ISP の API は使わない）', () => {
   assert.equal(C.parseIpify({ ip: '192.0.2.10' }), '192.0.2.10');
   assert.equal(C.parseIpify({ ip: '2001:db8::10' }), '2001:db8::10');
   assert.equal(C.parseIpify({ ip: '<script>' }), null);
   assert.equal(C.parseIpify({ ip: 12 }), null);
   assert.equal(C.parseIpify({ ip: 'abc' }), null); // 区切りがない
   assert.equal(C.parseIpify(null), null);
-  assert.deepEqual(C.parseIpapi({ org: 'Example ISP Inc.', asn: 'AS64496' }), { isp: 'Example ISP Inc.', asn: 'AS64496' });
-  assert.deepEqual(C.parseIpapi({ org: 'A' + String.fromCharCode(1) + 'B  ', asn: '' }), { isp: 'AB', asn: null });
-  assert.equal(C.parseIpapi({ org: 'x'.repeat(500) }).isp.length, 200);
-  assert.equal(C.parseIpapi({}), null);
-  assert.equal(C.parseIpapi('str'), null);
+  assert.equal(C.parseIpapi, undefined);
 });
 
 test('parseIpCache: 期限内で形が正しければ返し、壊れていれば null', () => {
   const now = 1_700_000_000_000;
   const ttl = 5 * 60 * 1000;
-  const ok = C.parseIpCache(JSON.stringify({ ipv4: '192.0.2.10', ipv6: null, isp: 'Example ISP Inc.', asn: 'AS64496' }), String(now - 1000), now, ttl);
-  assert.deepEqual(ok, { ipv4: '192.0.2.10', ipv6: null, isp: 'Example ISP Inc.', asn: 'AS64496', fetchedAt: now - 1000 });
+  const ok = C.parseIpCache(JSON.stringify({ ipv4: '192.0.2.10', ipv6: null, isp: 'ignored' }), String(now - 1000), now, ttl);
+  assert.deepEqual(ok, { ipv4: '192.0.2.10', ipv6: null, fetchedAt: now - 1000 }); // 古いキャッシュの isp は捨てる
   assert.equal(C.parseIpCache('{bad', String(now - 1000), now, ttl), null);
   assert.equal(C.parseIpCache(JSON.stringify({ ipv4: '192.0.2.10' }), String(now - ttl), now, ttl), null); // 期限切れ
   assert.equal(C.parseIpCache(JSON.stringify({ ipv4: '192.0.2.10' }), 'abc', now, ttl), null);
   assert.equal(C.parseIpCache(JSON.stringify({ ipv4: '192.0.2.10' }), String(now + 60000), now, ttl), null); // 未来の時刻
   assert.equal(C.parseIpCache('null', String(now - 1), now, ttl), null);
   assert.equal(C.parseIpCache(JSON.stringify({ ipv4: 'nope' }), String(now - 1), now, ttl), null);
-  assert.equal(C.parseIpCache(JSON.stringify({ ipv4: '192.0.2.10', isp: 'x<img>' }), String(now - 1), now, ttl).isp, 'x<img>'); // 文字列はそのまま（表示側が textContent で入れる）
+  assert.equal(C.parseIpCache(JSON.stringify({ isp: 'only isp' }), String(now - 1), now, ttl), null); // IP が無ければ使わない
   assert.equal(C.parseIpCache(JSON.stringify([1, 2]), String(now - 1), now, ttl), null);
+});
+
+// ---- フォント検出
+
+test('FONT_LIST は重複のない 60 件以上の名前。基準は monospace・sans-serif・serif', () => {
+  assert.ok(C.FONT_LIST.length >= 60, String(C.FONT_LIST.length));
+  assert.equal(new Set(C.FONT_LIST).size, C.FONT_LIST.length);
+  assert.deepEqual(C.FONT_BASES, ['monospace', 'sans-serif', 'serif']);
+  for (const name of ['Arial', 'Meiryo', 'MS Gothic', 'Hiragino Sans', 'Noto Sans JP', 'Roboto', 'Wingdings']) assert.ok(C.FONT_LIST.includes(name), name);
+});
+
+test('detectedFonts: どれか1つの基準と幅か高さが違えば「入っている」。基準と同じなら「入っていない」', () => {
+  const base = { monospace: [100, 80], 'sans-serif': [90, 80], serif: [95, 82] };
+  const measured = {
+    Arial: { monospace: [91, 80], 'sans-serif': [91, 80], serif: [91, 80] },
+    Meiryo: { monospace: [100, 80], 'sans-serif': [90, 80], serif: [96, 82] }, // serif だけ違う（実測の型）
+    'MS Gothic': { monospace: [100, 80], 'sans-serif': [100, 80], serif: [100, 80] }, // monospace だけ同じ
+    Roboto: { monospace: [100, 80], 'sans-serif': [90, 80], serif: [95, 82] }, // 全部同じ＝入っていない
+    'Hiragino Sans': { monospace: [100, 80.5], 'sans-serif': [90, 80], serif: [95, 82] }, // 高さだけ違う
+    Unknown: { monospace: [1, 1], 'sans-serif': [1, 1], serif: [1, 1] }, // 候補にない名前は無視
+  };
+  assert.deepEqual(C.detectedFonts(base, measured), ['Meiryo', 'MS Gothic', 'Arial', 'Hiragino Sans'].sort((a, b) => C.FONT_LIST.indexOf(a) - C.FONT_LIST.indexOf(b)));
+  assert.deepEqual(C.detectedFonts(base, {}), []);
+  assert.deepEqual(C.detectedFonts(null, null), []);
+  assert.deepEqual(C.detectedFonts(base, { Arial: { monospace: null } }), []);
+});
+
+test('fontsSummary は候補にある名前だけを数える', () => {
+  assert.deepEqual(C.fontsSummary(['Meiryo', 'Nope', 'Arial']), { tested: C.FONT_LIST.length, count: 2, names: ['Meiryo', 'Arial'] });
+  assert.deepEqual(C.fontsSummary(null), { tested: C.FONT_LIST.length, count: 0, names: [] });
+  const rows = C.attributeRows(sample(), false);
+  const fonts = rows.find((r) => r.key === 'fonts');
+  assert.equal(fonts.bits, 6.967);
+  assert.equal(fonts.inId, true);
+  assert.equal(C.attributeRows(sample(), true).find((r) => r.key === 'fonts').bits, 2.192);
+});
+
+// ---- スナップショットの読み込みと比較
+
+test('parseSnapshot: このツールの JSON を受け付け、大きすぎる・壊れた・形の違うものを断る', () => {
+  const ok = C.parseSnapshot(JSON.stringify(sample()));
+  assert.equal(ok.ok, true);
+  assert.equal(ok.data.ua.userAgent, UA.winChrome);
+  assert.equal(C.fingerprintId(ok.data).id, C.fingerprintId(sample()).id);
+  assert.deepEqual(C.parseSnapshot('{bad'), { ok: false, error: 'json' });
+  assert.deepEqual(C.parseSnapshot('[1, 2]'), { ok: false, error: 'shape' });
+  assert.deepEqual(C.parseSnapshot('{"a": 1}'), { ok: false, error: 'shape' });
+  assert.deepEqual(C.parseSnapshot('{"ua": "x", "screen": {}, "time": {}, "language": {}}'), { ok: false, error: 'shape' });
+  assert.deepEqual(C.parseSnapshot(''), { ok: false, error: 'json' });
+  assert.deepEqual(C.parseSnapshot(null), { ok: false, error: 'json' });
+  assert.deepEqual(C.parseSnapshot('{"ua":{},"screen":{},"time":{},"x":"' + 'a'.repeat(C.SNAPSHOT_MAX_BYTES) + '"}'), { ok: false, error: 'tooLarge' });
+});
+
+test('parseSnapshot は値の型と長さと深さを絞り、制御文字を落とす（信用しない JSON）', () => {
+  const s = sample();
+  s.ua.userAgent = 'x'.repeat(5000) + String.fromCharCode(7) + 'y';
+  s.language.languages = new Array(500).fill('ja');
+  s.screen.width = Infinity;
+  s.hardware.deep = { a: { b: { c: { d: { e: { f: 1 } } } } } };
+  s.plugins.names = [{ toString: 'nope' }];
+  const r = C.parseSnapshot(JSON.stringify(s));
+  assert.equal(r.ok, true);
+  assert.equal(r.data.ua.userAgent.length, 2000);
+  assert.equal(r.data.ua.userAgent.includes(String.fromCharCode(7)), false);
+  assert.equal(r.data.language.languages.length, 200);
+  assert.equal(r.data.screen.width, null);
+  assert.equal(r.data.hardware.deep.a.b.c, null); // 深さ5以上は捨てる
+  assert.deepEqual(r.data.plugins.names, [{ toString: 'nope' }]);
+  const t = C.parseSnapshot(JSON.stringify({ ...sample(), timestamp: 12 }));
+  assert.equal(t.data.timestamp, null);
+});
+
+test('compareSnapshots: 同じ・設定の違い・IP だけの違いを属性ごとに返す', () => {
+  const a = sample();
+  const same = C.compareSnapshots(a, sample());
+  assert.equal(same.total, C.ATTRIBUTES.length);
+  assert.deepEqual(same.changed, []);
+  assert.equal(same.idA, same.idB);
+  const b = sample();
+  b.time.timezone = 'UTC';
+  b.network = { ipv4: '198.51.100.7', ipv6: null, fetchedAt: 2, status: 'ok' };
+  const r = C.compareSnapshots(a, b);
+  assert.deepEqual(r.changed, ['time', 'network']);
+  assert.deepEqual(r.changedInId, ['time']);
+  assert.notEqual(r.idA, r.idB);
+  assert.deepEqual(r.rows.find((x) => x.key === 'time'), { key: 'time', inId: true, a: a.time, b: b.time, same: false });
+  assert.deepEqual(r.rows.find((x) => x.key === 'network'), { key: 'network', inId: false, a: a.network, b: b.network, same: false });
+  const c = sample();
+  c.network = { ipv4: '198.51.100.7', ipv6: null, fetchedAt: 2, status: 'ok' };
+  const ipOnly = C.compareSnapshots(a, c);
+  assert.deepEqual(ipOnly.changed, ['network']);
+  assert.deepEqual(ipOnly.changedInId, []);
+  assert.equal(ipOnly.idA, ipOnly.idB);
+  assert.equal(C.compareSnapshots({}, {}).changed.length, 0);
+});
+
+test('describeSnapshot はブラウザー・OS・時刻を短くまとめる', () => {
+  assert.deepEqual(C.describeSnapshot(sample()), { browser: 'Chrome 140', os: 'Windows', timestamp: '2026-10-07T06:00:00.000Z' });
+  assert.deepEqual(C.describeSnapshot({}), { browser: 'Unknown', os: 'Unknown', timestamp: null });
 });
 
 // ---- 整形

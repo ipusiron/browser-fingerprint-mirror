@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api4.ipify.org https://api6.ipify.org https://ipapi.co; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api4.ipify.org https://api6.ipify.org; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';" />
   <meta name="referrer" content="no-referrer" />
   <meta name="color-scheme" content="dark light" />
   <title data-i18n="ui.docTitle">Browser Fingerprint Mirror - ブラウザー指紋ミラー</title>
@@ -31,6 +31,7 @@
     <nav class="tabs" role="tablist" aria-label="表示モード" data-i18n-attr="aria-label:ui.tabsLabel">
       <button class="tab active" id="tab-btn-simple" type="button" role="tab" data-tab="simple" aria-selected="true" aria-controls="simple" data-i18n="ui.tabSimple">シンプル</button>
       <button class="tab" id="tab-btn-advanced" type="button" role="tab" data-tab="advanced" aria-selected="false" aria-controls="advanced" tabindex="-1" data-i18n="ui.tabAdvanced">詳細・分析</button>
+      <button class="tab" id="tab-btn-compare" type="button" role="tab" data-tab="compare" aria-selected="false" aria-controls="compare" tabindex="-1" data-i18n="ui.tabCompare">比較</button>
       <button class="tab" id="tab-btn-learn" type="button" role="tab" data-tab="learn" aria-selected="false" aria-controls="learn" tabindex="-1" data-i18n="ui.tabLearn">座学</button>
     </nav>
 
@@ -61,7 +62,7 @@
         <h2 class="group-title" data-i18n="simple.groupNetwork">🌐 ネットワーク</h2>
         <div class="net-fetch">
           <button class="btn" id="fetch-ip" type="button" data-i18n="net.button">IPを取得する（外部APIへ接続）</button>
-          <p class="hint" data-i18n="net.note">押すとipify.org（IPv4/IPv6）とipapi.co（ISP）へ接続します。押すまで外部へは何も送りません。ipapi.coの無料枠では問い合わせたIPがログに残ります。結果は5分間ブラウザーに保存します。</p>
+          <p class="hint" data-i18n="net.note">押すとipify.org（IPv4/IPv6）へ接続し、接続先にはあなたのIPアドレスが渡ります。押すまで外部へは何も送りません。ipify.orgは訪問者の情報を記録しないと明記しています。結果は5分間ブラウザーに保存します。ISPは取得しません（座学の参考リンクの外部サイトで確認できます）。</p>
           <p class="status" id="net-status" aria-live="polite"></p>
         </div>
         <div class="grid">
@@ -72,11 +73,6 @@
           <div class="card">
             <div class="label" data-i18n="simple.ipv6">IPv6アドレス</div>
             <div class="value" id="simple-ipv6">-</div>
-          </div>
-          <div class="card">
-            <div class="label" data-i18n="simple.isp">ISP / プロバイダー</div>
-            <div class="value" id="simple-isp">-</div>
-            <div class="hint" data-i18n="simple.ispHint">組織名とASN</div>
           </div>
         </div>
       </div>
@@ -156,9 +152,59 @@
         <summary data-i18n="privacy.summary">プライバシー / 免責</summary>
         <ul>
           <li data-i18n="privacy.line1">収集した値はこのページの中で表示するだけで、サーバーへ送信しません。</li>
-          <li data-i18n="privacy.line2">例外は「IPを取得する」を押したときだけで、ipify.orgとipapi.coに接続します（接続先にはあなたのIPアドレスが渡ります）。</li>
+          <li data-i18n="privacy.line2">例外は「IPを取得する」を押したときだけで、ipify.orgに接続します（接続先にはあなたのIPアドレスが渡ります）。</li>
           <li data-i18n="privacy.line3">ブラウザーに保存するのは、テーマと言語の選択、前回の指紋ID、5分間のIP情報だけです。</li>
           <li data-i18n="privacy.line4">Canvas/WebGL/Audioの値は教育のために表示しています。「研究での識別力」は研究データの参考値で、あなたの珍しさではありません。</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- 比較 -->
+    <section id="compare" class="panel" role="tabpanel" aria-labelledby="tab-btn-compare">
+      <p class="hint" data-i18n="cmp.intro">2つの環境の指紋を属性ごとに比べます。Aに「いまの環境」を入れてから、シークレットモード・別のブラウザー・VPN・拡張機能の有無などで開いた画面の「JSONコピー」をBに貼り付けると、何が変わって何が変わらないかが見えます。JSONはこのページの中で読むだけで、どこにも送りません。</p>
+      <div class="cmp-grid">
+        <section class="cmp-side" aria-labelledby="cmp-a-title">
+          <h2 class="section-title" id="cmp-a-title" data-i18n="cmp.sideA">A</h2>
+          <div class="toolbar">
+            <button class="btn" id="cmp-a-current" type="button" data-i18n="cmp.useCurrent">いまの環境を入れる</button>
+            <button class="btn secondary" id="cmp-a-paste" type="button" data-i18n="cmp.paste">貼り付けたJSONを読む</button>
+            <button class="btn secondary" id="cmp-a-file" type="button" data-i18n="cmp.file">JSONファイルを読む</button>
+            <input type="file" id="cmp-a-input" accept=".json,application/json" hidden />
+          </div>
+          <textarea class="cmp-text" id="cmp-a-text" rows="4" placeholder="「JSONコピー」の内容を貼り付け" data-i18n-attr="placeholder:cmp.placeholder;aria-label:cmp.textLabelA" aria-label="AのJSON"></textarea>
+          <p class="status" id="cmp-a-status" aria-live="polite"></p>
+        </section>
+        <section class="cmp-side" aria-labelledby="cmp-b-title">
+          <h2 class="section-title" id="cmp-b-title" data-i18n="cmp.sideB">B</h2>
+          <div class="toolbar">
+            <button class="btn" id="cmp-b-current" type="button" data-i18n="cmp.useCurrent">いまの環境を入れる</button>
+            <button class="btn secondary" id="cmp-b-paste" type="button" data-i18n="cmp.paste">貼り付けたJSONを読む</button>
+            <button class="btn secondary" id="cmp-b-file" type="button" data-i18n="cmp.file">JSONファイルを読む</button>
+            <input type="file" id="cmp-b-input" accept=".json,application/json" hidden />
+          </div>
+          <textarea class="cmp-text" id="cmp-b-text" rows="4" placeholder="「JSONコピー」の内容を貼り付け" data-i18n-attr="placeholder:cmp.placeholder;aria-label:cmp.textLabelB" aria-label="BのJSON"></textarea>
+          <p class="status" id="cmp-b-status" aria-live="polite"></p>
+        </section>
+      </div>
+      <div class="toolbar">
+        <button class="btn" id="cmp-run" type="button" data-i18n="cmp.run">比べる</button>
+        <button class="btn secondary" id="cmp-swap" type="button" data-i18n="cmp.swap">AとBを入れ替える</button>
+      </div>
+      <div class="id-wrap" id="cmp-summary" hidden>
+        <div class="id-label" data-i18n="cmp.summaryLabel">比較の結果</div>
+        <p class="cmp-ids" id="cmp-ids"></p>
+        <p class="cmp-changed" id="cmp-changed" aria-live="polite"></p>
+        <p class="hint" data-i18n="cmp.summaryHint">指紋IDに含む属性が1つでも違えばIDは変わります。IPは指紋IDに含めないので、IPだけが違っても同じIDです。</p>
+      </div>
+      <div class="cmp-list" id="cmp-list"></div>
+      <details class="privacy">
+        <summary data-i18n="cmp.howtoTitle">試してみる実験</summary>
+        <ul>
+          <li data-i18n="cmp.howto1">シークレットモード（プライベートウィンドウ）で同じページを開き、「JSONコピー」をBに貼る。端末やOSの情報は変わらないので、指紋IDは同じになる</li>
+          <li data-i18n="cmp.howto2">別のブラウザー（ChromeとFirefoxなど）で開いて比べる。User-Agent・WebGL・Canvas・フォントの検出結果が変わる</li>
+          <li data-i18n="cmp.howto3">VPNを使って比べる。変わるのはIPだけで、指紋IDは同じになる</li>
+          <li data-i18n="cmp.howto4">Canvas Blockerなどの拡張機能や、Firefoxのprivacy.resistFingerprintingを有効にして比べる。どの属性が隠されるかが見える</li>
+          <li data-i18n="cmp.howto5">別の端末のJSONをファイルで持ち込んで比べる。端末が違えば、どれだけ多くの属性が違うかがわかる</li>
         </ul>
       </details>
     </section>
@@ -178,16 +224,16 @@
         <details class="learn-accordion">
           <summary class="learn-summary" data-i18n="learn.s2.title">🧮 指紋IDと安定性</summary>
           <div class="learn-body">
-            <p data-i18n="learn.s2.p1">「詳細・分析」の指紋IDは、安定な属性（IPと時刻を除く19項目）を正規化してSHA-256にした先頭16桁です。同じ環境なら、再読み込みでもシークレットモードでも同じ値になります。</p>
+            <p data-i18n="learn.s2.p1">「詳細・分析」の指紋IDは、安定な属性（IPと時刻を除く20項目）を正規化してSHA-256にした先頭16桁です。同じ環境なら、再読み込みでもシークレットモードでも同じ値になります。</p>
             <p data-i18n="learn.s2.p2">追跡に使えるかどうかは「珍しさ」だけでなく「安定しているか」で決まります。再読み込みのたびに変わる値は、どんなに珍しくても追跡には使えません。属性の一覧では、安定性を次の5つに分けています。</p>
             <ul>
-              <li data-i18n="learn.s2.li1">端末・OSで決まる（変えにくい）＝画面・ハードウェア・navigator.platform・WebGL・Canvas・Audio</li>
+              <li data-i18n="learn.s2.li1">端末・OSで決まる（変えにくい）＝画面・ハードウェア・navigator.platform・WebGL・Canvas・Audio・フォント</li>
               <li data-i18n="learn.s2.li2">設定で決まる（変えられる）＝言語・ロケール・タイムゾーン・ストレージの可否・Cookie・DNT・GPC・メディアクエリ</li>
               <li data-i18n="learn.s2.li3">更新で変わる＝User-Agent・UA Client Hints</li>
               <li data-i18n="learn.s2.li4">仕様で固定（識別力なし）＝プラグイン一覧</li>
-              <li data-i18n="learn.s2.li5">接続ごとに変わる＝IPアドレスとISP（指紋IDには含めない）</li>
+              <li data-i18n="learn.s2.li5">接続ごとに変わる＝IPアドレス（指紋IDには含めない）</li>
             </ul>
-            <p data-i18n="learn.s2.p3">試してみましょう。「もう一度読む」を押す、シークレットモードで開く、別のブラウザーで開く、VPNを使う。それぞれで何が変わるかを「属性の一覧」で見比べると、指紋の性質が見えてきます。</p>
+            <p data-i18n="learn.s2.p3">試してみましょう。「もう一度読む」を押す、シークレットモードで開く、別のブラウザーで開く、VPNを使う。それぞれで何が変わるかを「比較」タブで並べると、指紋の性質が見えてきます。</p>
           </div>
         </details>
 

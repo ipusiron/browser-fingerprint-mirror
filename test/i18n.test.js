@@ -90,6 +90,13 @@ test('初期の言語: ?lang= → 保存した選択 → ブラウザーの言�
   assert.equal(I18N.initialLanguage('', 'xx', []), 'en');
 });
 
+test('parseSnapshot の error の種類すべてに文言がある', () => {
+  for (const code of ['tooLarge', 'json', 'shape']) {
+    const key = 'cmp.err' + code.charAt(0).toUpperCase() + code.slice(1);
+    assert.ok(key in MESSAGES.ja && key in MESSAGES.en, key);
+  }
+});
+
 test('script.js が出す動的な文言のキーが両方の辞書にそろう（保護・属性・安定性を含む）', () => {
   const script = read('script.js');
   const used = new Set([...script.matchAll(/\bt\('([\w.]+)'\s*[,)]/g)].map((m) => m[1]));
@@ -100,7 +107,8 @@ test('script.js が出す動的な文言のキーが両方の辞書にそろう�
     'webglMasked.on', 'webglMasked.off', 'uaReduced.on', 'uaReduced.off', 'deviceMemoryHidden.on', 'deviceMemoryHidden.off', 'dnt.on', 'dnt.off',
     'gpc.on', 'gpc.off', 'gpc.na', 'tzUtc.on', 'tzUtc.off']) used.add('prot.' + k);
   for (const k of ['simple.gpcOn', 'simple.gpcOff', 'simple.gpcNa', 'simple.cookieOn', 'simple.cookieOff', 'simple.dntOn', 'simple.dntOff', 'simple.yes', 'simple.no',
-    'theme.toLight', 'theme.toDark', 'net.statusCache', 'net.statusRateLimited', 'net.statusNoisp', 'net.statusFailed', 'net.statusOk']) used.add(k);
+    'theme.toLight', 'theme.toDark', 'net.statusCache', 'net.statusFailed', 'net.statusOk',
+    'cmp.errEmpty', 'cmp.errTooLarge', 'cmp.errJson', 'cmp.errShape', 'cmp.errFile', 'cmp.statusCurrent', 'cmp.statusLoaded', 'cmp.statusEmpty']) used.add(k);
   for (const k of used) assert.ok(k in MESSAGES.ja && k in MESSAGES.en, `辞書にないキー: ${k}`);
   assert.ok(used.size >= 60, String(used.size));
 });

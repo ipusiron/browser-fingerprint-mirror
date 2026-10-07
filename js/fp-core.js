@@ -173,6 +173,7 @@
     { key: 'canvas', path: ['canvas', 'hash'], stability: 'hardware', inId: true, ref: { pc: 8.043, mobile: 7.930, attr: 'Canvas', source: SOURCE_2018 } },
     { key: 'audio', path: ['audio', 'hash'], stability: 'hardware', inId: true, ref: null },
     { key: 'plugins', path: ['plugins'], stability: 'fixedList', inId: true, ref: { pc: 10.281, mobile: 0.206, attr: 'List of plugins', source: SOURCE_2018 } },
+    { key: 'fonts', path: ['fonts'], stability: 'hardware', inId: true, ref: { pc: 6.967, mobile: 2.192, attr: 'Available fonts', source: SOURCE_2018 } },
     { key: 'network', path: ['network'], stability: 'volatile', inId: false, ref: null },
   ];
 
@@ -305,33 +306,17 @@
   }
 
   /* ======================================================================
-     外部 API（IP/ISP）の応答とキャッシュの検証
+     外部 API（IP）の応答とキャッシュの検証
      ====================================================================== */
   const IP_RE = /^[0-9a-fA-F.:]{2,45}$/;
-  const MAX_ORG = 200;
 
   function validIp(v) {
     return typeof v === 'string' && IP_RE.test(v) && (v.includes('.') || v.includes(':'));
   }
 
-  function cleanText(v) {
-    if (typeof v !== 'string') return null;
-    const t = v.replace(/[\u0000-\u001f\u007f]/g, '').trim();
-    return t ? t.slice(0, MAX_ORG) : null;
-  }
-
   // ipify の応答 { ip } → 文字列か null
   function parseIpify(obj) {
     return obj && validIp(obj.ip) ? obj.ip : null;
-  }
-
-  // ipapi.co の応答 { org, asn, … } → { isp, asn } か null
-  function parseIpapi(obj) {
-    if (!obj || typeof obj !== 'object') return null;
-    const isp = cleanText(obj.org);
-    const asn = cleanText(obj.asn);
-    if (!isp && !asn) return null;
-    return { isp, asn };
   }
 
   // localStorage のキャッシュ（JSON 文字列と保存時刻）を検証して返す。壊れていれば null
@@ -348,12 +333,118 @@
     const out = {
       ipv4: validIp(obj.ipv4) ? obj.ipv4 : null,
       ipv6: validIp(obj.ipv6) ? obj.ipv6 : null,
-      isp: cleanText(obj.isp),
-      asn: cleanText(obj.asn),
       fetchedAt: t,
     };
-    if (!out.ipv4 && !out.ipv6 && !out.isp && !out.asn) return null;
+    if (!out.ipv4 && !out.ipv6) return null;
     return out;
+  }
+
+  /* ======================================================================
+     フォント検出。候補の名前ごとに、3つの総称ファミリー（基準）にフォールバックさせて幅・高さを測り、
+     どれか1つでも基準と違えばそのフォントが入っていると判定する（FontFaceSet の check() は未インストールの名前にも true を返すので使えない）
+     ====================================================================== */
+  const FONT_BASES = ['monospace', 'sans-serif', 'serif'];
+  const FONT_LIST = [
+    // Windows
+    'Arial', 'Arial Black', 'Bahnschrift', 'Calibri', 'Cambria', 'Candara', 'Comic Sans MS', 'Consolas', 'Constantia', 'Corbel',
+    'Courier New', 'Georgia', 'Impact', 'Lucida Console', 'Segoe UI', 'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana',
+    'Meiryo', 'MS Gothic', 'MS PGothic', 'MS Mincho', 'MS PMincho', 'Yu Gothic', 'Yu Mincho', 'BIZ UDGothic', 'BIZ UDMincho', 'UD Digi Kyokasho N-R',
+    // macOS / iOS
+    'Helvetica Neue', 'Helvetica', 'Menlo', 'Monaco', 'Avenir', 'Gill Sans', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Hiragino Mincho ProN',
+    'Osaka', 'Apple SD Gothic Neo', 'PingFang SC', 'Klee',
+    // Linux / Android
+    'DejaVu Sans', 'DejaVu Serif', 'Liberation Sans', 'Liberation Mono', 'Noto Sans', 'Noto Sans CJK JP', 'Noto Sans JP', 'Noto Serif',
+    'Ubuntu', 'Cantarell', 'Roboto', 'IPAGothic', 'IPAPGothic', 'VL Gothic', 'Source Han Sans',
+    // 記号・等幅
+    'Wingdings', 'Symbol', 'Segoe UI Emoji', 'Fira Code', 'JetBrains Mono', 'Source Code Pro', 'Cascadia Code',
+  ];
+
+  // baseDims = { base: [w, h] }、measured = { family: { base: [w, h] } }。入っていると判定した名前を FONT_LIST の順で返す
+  function detectedFonts(baseDims, measured) {
+    const out = [];
+    for (const fam of FONT_LIST) {
+      const m = measured && measured[fam];
+      if (!m) continue;
+      const hit = FONT_BASES.some((b) => {
+        const d = m[b];
+        const base = baseDims && baseDims[b];
+        return Array.isArray(d) && Array.isArray(base) && (d[0] !== base[0] || d[1] !== base[1]);
+      });
+      if (hit) out.push(fam);
+    }
+    return out;
+  }
+
+  function fontsSummary(names) {
+    const list = Array.isArray(names) ? names.filter((n) => FONT_LIST.includes(n)) : [];
+    return { tested: FONT_LIST.length, count: list.length, names: list };
+  }
+
+  /* ======================================================================
+     スナップショットの読み込み（信用しない JSON を、表示に使える形に絞る）と比較
+     ====================================================================== */
+  const SNAPSHOT_MAX_BYTES = 256 * 1024;
+  const SNAP_MAX_STRING = 2000;
+  const SNAP_MAX_ITEMS = 200;
+  const SNAP_MAX_KEYS = 64;
+  const SNAP_MAX_DEPTH = 5;
+  const CONTROL_RE = new RegExp('[' + String.fromCharCode(0) + '-' + String.fromCharCode(8) + String.fromCharCode(11) + String.fromCharCode(12)
+    + String.fromCharCode(14) + '-' + String.fromCharCode(31) + String.fromCharCode(127) + ']', 'g');
+
+  // 型を文字列・有限の数・真偽値・null・配列・プレーンなオブジェクトに絞り、長さと深さを切る
+  function sanitizeValue(value, depth) {
+    const d = depth || 0;
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'string') return value.replace(CONTROL_RE, '').slice(0, SNAP_MAX_STRING);
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    if (typeof value === 'boolean') return value;
+    if (d >= SNAP_MAX_DEPTH) return null;
+    if (Array.isArray(value)) return value.slice(0, SNAP_MAX_ITEMS).map((v) => sanitizeValue(v, d + 1));
+    if (typeof value === 'object') {
+      const out = {};
+      for (const k of Object.keys(value).slice(0, SNAP_MAX_KEYS)) out[k.slice(0, 64)] = sanitizeValue(value[k], d + 1);
+      return out;
+    }
+    return null;
+  }
+
+  // JSON 文字列 → { ok: true, data } か { ok: false, error: 'tooLarge' | 'json' | 'shape' }
+  function parseSnapshot(text) {
+    const s = String(text === null || text === undefined ? '' : text);
+    if (utf8Bytes(s).length > SNAPSHOT_MAX_BYTES) return { ok: false, error: 'tooLarge' };
+    let obj;
+    try {
+      obj = JSON.parse(s);
+    } catch (e) {
+      return { ok: false, error: 'json' };
+    }
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return { ok: false, error: 'shape' };
+    const known = ATTRIBUTES.filter((a) => a.path[0] in obj && a.path[0] !== 'network').length;
+    if (known < 3 || !obj.ua || typeof obj.ua !== 'object') return { ok: false, error: 'shape' };
+    const data = sanitizeValue(obj, 0);
+    if (typeof data.timestamp !== 'string') data.timestamp = null;
+    return { ok: true, data };
+  }
+
+  // 2つのスナップショットを属性ごとに比べる
+  function compareSnapshots(a, b) {
+    const rows = ATTRIBUTES.map((attr) => {
+      const va = getPath(a || {}, attr.path);
+      const vb = getPath(b || {}, attr.path);
+      return { key: attr.key, inId: attr.inId, a: va, b: vb, same: canonicalize(va) === canonicalize(vb) };
+    });
+    const changed = rows.filter((r) => !r.same).map((r) => r.key);
+    const changedInId = rows.filter((r) => !r.same && r.inId).map((r) => r.key);
+    return { rows, changed, changedInId, total: rows.length, idA: fingerprintId(a).id, idB: fingerprintId(b).id };
+  }
+
+  // スナップショットの短い説明（ブラウザー・OS・時刻）
+  function describeSnapshot(data) {
+    const d = data || {};
+    const ua = d.ua || {};
+    const br = detectBrowser({ ua: ua.userAgent, brands: ua.uaData && ua.uaData.brands });
+    const os = detectOS({ ua: ua.userAgent, chPlatform: ua.uaData && ua.uaData.platform, platform: ua.platform, maxTouchPoints: d.hardware && d.hardware.maxTouchPoints });
+    return { browser: br.version ? br.name + ' ' + br.version : br.name, os: os.name, timestamp: typeof d.timestamp === 'string' ? d.timestamp : null };
   }
 
   /* ======================================================================
@@ -373,6 +464,8 @@
   root.FPCore = {
     VERSION, sha256Hex, utf8Bytes, canonicalize, detectOS, detectBrowser, isReducedUA,
     ATTRIBUTES, STUDY_TABLE, STUDY_META, FIXED_PLUGIN_NAMES, attributeRows, stableSubset, fingerprintId, diffAttributes, isMobileHint,
-    detectProtections, parseIpify, parseIpapi, parseIpCache, validIp, formatValue, formatBits, getPath,
+    detectProtections, parseIpify, parseIpCache, validIp, formatValue, formatBits, getPath,
+    FONT_LIST, FONT_BASES, detectedFonts, fontsSummary,
+    SNAPSHOT_MAX_BYTES, sanitizeValue, parseSnapshot, compareSnapshots, describeSnapshot,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

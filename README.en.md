@@ -40,6 +40,9 @@ Try it directly in your browser. Use `?lang=en` or the language button for Engli
 >![Learn mode in dark theme. The table of identifying power per attribute measured in research](assets/en/screenshot3.png)
 >*Learn mode (dark theme). The table of identifying power per attribute from the 2010, 2016 and 2018 studies, with notes on how to read it*
 
+>![Compare mode. The current environment (A) against an environment with a different time zone and language (B)](assets/en/screenshot4.png)
+>*Compare mode. Put the current environment into A and the "Copy JSON" of another environment into B to see whether the fingerprint IDs match and which attributes differ*
+
 ---
 
 ## 🔍 What is browser fingerprinting?
@@ -62,7 +65,7 @@ Instead, without sending anything, it shows what is visible, whether it is stabl
 
 - Browser and OS (UA Client Hints first, otherwise the User-Agent), screen resolution and devicePixelRatio
 - Languages, time zone, touch/CPU cores/memory, and the state of cookies, Do Not Track and Global Privacy Control
-- IPv4/IPv6 addresses and the ISP are fetched from external APIs (ipify.org, ipapi.co) only when you press "Fetch IP". The result is kept in the browser for 5 minutes
+- IPv4/IPv6 addresses are fetched from an external API (ipify.org) only when you press "Fetch IP". The result is kept in the browser for 5 minutes. The ISP is not looked up (see the external sites in the references)
 
 ### Details & analysis mode
 
@@ -70,8 +73,15 @@ Instead, without sending anything, it shows what is visible, whether it is stabl
 - "Read again" recomputes and shows whether the ID stays the same (and which attributes changed)
 - The previous visit's fingerprint ID is stored in the browser and compared on the next visit ("same" or "different"), a hands-on demonstration of cookie-less tracking. "Clear previous record" removes it
 - Detected protections = Canvas randomization (two draws with different hashes), plugin list fixed by specification, WebGL name masked, reduced User-Agent, device memory hidden, DNT/GPC, and whether the time zone is UTC
-- Attribute list = the values of 20 items with their stability class, whether they are in the fingerprint ID, and the identifying power (bits) measured in research
+- Attribute list = the values of 21 items with their stability class, whether they are in the fingerprint ID, and the identifying power (bits) measured in research
 - Copy JSON (copies the displayed data as is; failures are reported where the clipboard is unavailable)
+
+### Compare mode
+
+- Put the current environment, or the "Copy JSON" output of another environment (pasted or loaded from a JSON file), into A and B and compare the 21 items attribute by attribute
+- Shows whether the fingerprint IDs match, how many attributes differ and which, and whether only attributes outside the fingerprint ID differ
+- The same screen lists experiments: private browsing, another browser, a VPN, extensions, another device
+- Imported JSON is limited to 256KB, validated for shape and types, and strings are truncated before display (nothing is sent anywhere)
 
 ### Learn mode
 
@@ -94,7 +104,7 @@ Instead, without sending anything, it shows what is visible, whether it is stabl
 4. Open the same page in private browsing or in another browser and compare the fingerprint ID
 5. Check "Detected protections" to see whether your browser's defenses (Brave randomization, Firefox `privacy.resistFingerprinting`, etc.) are in effect
 6. Read the attribute list to see which attributes enter the fingerprint ID and how much they mattered in research
-7. Use "Copy JSON" to copy all data and compare it with another environment
+7. Use "Copy JSON" to copy all data, then paste it (or load the JSON file) into B on the "Compare" tab and compare it with the current environment
 
 ---
 
@@ -103,9 +113,10 @@ Instead, without sending anything, it shows what is visible, whether it is stabl
 | Area | Content |
 |---|---|
 | Header | Title, language and theme toggles |
-| Tabs | Simple / Details & analysis / Learn |
+| Tabs | Simple / Details & analysis / Compare / Learn |
 | Simple | Cards for browser and system, network (with the fetch button), region and language, hardware, privacy settings |
 | Details & analysis | Actions (Read again, Copy JSON), fingerprint ID card (stability, previous visit), detected protections, attribute list, privacy/disclaimer |
+| Compare | Inputs for A and B (current environment, paste, file), compare and swap, result (fingerprint IDs, differing attributes), A/B per attribute, experiments to try |
 | Learn | Explanations in accordions |
 
 ---
@@ -114,7 +125,7 @@ Instead, without sending anything, it shows what is visible, whether it is stabl
 
 ### How the fingerprint ID is made
 
-1. `js/fp-collect.js` reads values from browser APIs (the 20 items in the catalog below)
+1. `js/fp-collect.js` reads values from browser APIs (the 21 items in the catalog below)
 2. The items marked "in the fingerprint ID" are turned into canonical JSON with keys in dictionary order
 3. SHA-256 of that JSON (implemented in pure JavaScript and checked against Node's `crypto` in tests) gives the fingerprint ID as its first 16 hex digits
 
@@ -144,11 +155,19 @@ Canvas is drawn twice; only the first hash enters the ID (the second is for dete
 | Canvas hash | Set by device and OS (hard to change) | included | 8.043 | 7.930 | Canvas |
 | Audio hash | Set by device and OS (hard to change) | included | — | — | — |
 | Plugins | Fixed by specification (no identifying power) | included | 10.281 | 0.206 | List of plugins |
-| Network (IP/ISP) | Changes per connection | excluded | — | — | — |
+| Fonts (detected by width measurement) | Set by device and OS (hard to change) | included | 6.967 | 2.192 | Available fonts |
+| Network (IP) | Changes per connection | excluded | — | — | — |
 
 "Bits" is the Shannon entropy that Gómez-Boix, Laperdrix and Baudry (2018) measured on 2,067,942 fingerprints collected on a major French website.
 The PC column (1,816,776 fingerprints) or the mobile column (251,166) is chosen from the UA-CH `mobile` hint and similar signals.
 "—" marks attributes the study did not measure.
+
+### Font detection
+
+For each candidate font name (Windows, macOS, Linux, Japanese, monospace, symbol fonts), the width and height of a test string are measured with the font falling back to each of three generic families (monospace, sans-serif, serif). If any of the three differs from the generic family alone, the font is considered installed.
+Three baselines are needed because some fonts, such as Meiryo, have the same width as one generic family (a single baseline would miss them).
+`document.fonts.check()` is not used because it returns true even for names that are not installed.
+Fonts outside the candidate list cannot be detected, so the result is bounded by the size of the list.
 
 ### Identifying power per attribute measured in research
 
@@ -199,6 +218,12 @@ How to read it.
 Only observed facts are listed.
 Anything missing was "not detected", which does not mean "no protection".
 
+### Comparison and JSON import
+
+The "Compare" tab compares the 21 catalog items of two snapshots as canonical JSON and reports which attributes differ and whether any attribute inside the fingerprint ID differs.
+Pasted or loaded JSON is not trusted: it must be at most 256KB, an object, and in this tool's shape (`ua` plus at least three catalog items); strings are cut to 2,000 characters, arrays to 200 items and depth to 5, and control characters are removed before display.
+Rendering uses `textContent`, so nothing in the JSON can become script.
+
 ### OS and browser detection
 
 If UA Client Hints (`navigator.userAgentData`) are available, their `platform` and `brands` take precedence (GREASE fake brands are ignored).
@@ -215,7 +240,7 @@ An iPad in desktop mode calls itself Macintosh, so `maxTouchPoints` of 2 or more
 - Work (support and QA): ask users to send the "Copy JSON" output to learn their exact OS, browser, resolution and languages (the JSON contains no IP unless it was fetched)
 - Home: look together at what a family member's device exposes. Compare the fingerprint ID and detected protections before and after installing an extension such as Canvas Blocker or enabling a browser protection
 - Hobby and writing: verify UA-CH, Canvas fingerprints and WebGL renderer strings that appear in CTF web challenges or articles. Fill the "test environment" section of a blog post from the JSON
-- Research: map the study tables (2010, 2016, 2018) to your own values and consider which attributes still matter and which have been neutralized by specifications. Save the JSON from several browsers and compare
+- Research: map the study tables (2010, 2016, 2018) to your own values and consider which attributes still matter and which have been neutralized by specifications. Put the JSON of several browsers or devices side by side on the "Compare" tab
 - Combined with other tools: Browser Permission Radar (Day092) shows permission exposure while this tool shows fingerprint exposure. Use Cover Your Tracks or AmIUnique for population comparison
 
 Limits apply.
@@ -226,10 +251,9 @@ Protection detection covers only what can be observed, and the IP depends on ext
 
 ## 🔒 Security and privacy
 
-- Collected values are only displayed on the page and never sent to a server. The only outbound connections are ipify.org and ipapi.co when you press "Fetch IP"; they receive your IP address
-- ipapi.co's free tier allows about 1,000 requests per day and keeps queried IPs in its logs (as stated on its pricing page). It is not meant for production use
+- Collected values are only displayed on the page and never sent to a server. The only outbound connection is ipify.org when you press "Fetch IP"; it receives your IP address. ipify.org states that it logs no visitor information
 - The browser stores only the theme and language choice, the previous fingerprint ID (removable with "Clear previous record") and the IP information for 5 minutes. Everything read back is validated and discarded if corrupted
-- The meta CSP is `default-src 'self'` without `unsafe-inline`; `connect-src` lists only the three hosts above; the referrer policy is `no-referrer`
+- The meta CSP is `default-src 'self'` without `unsafe-inline`; `connect-src` lists only the two ipify hosts; the referrer policy is `no-referrer`
 - Rendering uses `textContent`, never `innerHTML`. API responses are validated before display
 - No external libraries, CDNs or analytics
 
@@ -239,7 +263,7 @@ Protection detection covers only what can be observed, and the IP depends on ext
 
 - "Identifying power in research" is an average from research data, not the rarity of your value
 - "Detected protections" shows only observed facts. Not detected does not mean no protection
-- On a connection without IPv6, the IPv6 field reads "unsupported or failed". ipapi.co may answer with a bot-protection challenge, in which case the ISP reads "failed" (the IPv4 address still comes from ipify.org). If it rate-limits you (HTTP 429), wait and try again
+- On a connection without IPv6, the IPv6 field reads "unsupported or failed". The ISP is not looked up (APIs that answer with bot-protection challenges cannot be used from a browser)
 - The page works from `file://`, but the clipboard is denied there (the failure is reported)
 - This is an educational demo; it does not encourage tracking or commercial use
 
@@ -297,10 +321,12 @@ browser-fingerprint-mirror/
 │   ├── en/                  # English screenshots
 │   │   ├── screenshot.png   # Simple mode
 │   │   ├── screenshot2.png  # Details & analysis mode
-│   │   └── screenshot3.png  # Learn mode (dark)
+│   │   ├── screenshot3.png  # Learn mode (dark)
+│   │   └── screenshot4.png  # Compare mode
 │   ├── screenshot.png       # Simple mode (Japanese)
 │   ├── screenshot2.png      # Details & analysis mode (Japanese)
-│   └── screenshot3.png      # Learn mode, dark (Japanese)
+│   ├── screenshot3.png      # Learn mode, dark (Japanese)
+│   └── screenshot4.png      # Compare mode (Japanese)
 ├── index.html               # Page structure (CSP, tabs, modes)
 ├── js/                      # Logic, collection, strings, language
 │   ├── fp-collect.js        # Reads browser APIs. The IP lookup lives only here
@@ -329,7 +355,7 @@ npm test
 ```
 
 - Runs on Node 22 or later with no packages (`node --test`)
-- Logic tests (SHA-256 against Node's `crypto` and known vectors, the OS/browser detection matrix, fingerprint ID stability, protections, API and cache validation)
+- Logic tests (SHA-256 against Node's `crypto` and known vectors, the OS/browser detection matrix, fingerprint ID stability, protections, font detection, snapshot validation and comparison, API and cache validation)
 - HTML, color and format tests (CSP, ARIA, text/background contrast, minification detection, no Japanese literals, host restrictions)
 - Language tests (shared keys, HTML text equals the dictionary, no Japanese left in English)
 - README tests (attribute catalog and study tables recomputed from code, complete directory tree, screenshots exist, notation, both READMEs aligned)

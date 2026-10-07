@@ -10,7 +10,8 @@ test('CSP の meta があり、meta では効かない指定と unsafe-inline �
   assert.match(csp[1], /default-src 'self'/);
   assert.match(csp[1], /script-src 'self'/);
   assert.match(csp[1], /style-src 'self';/);
-  assert.match(csp[1], /connect-src 'self' https:\/\/api4\.ipify\.org https:\/\/api6\.ipify\.org https:\/\/ipapi\.co;/);
+  assert.match(csp[1], /connect-src 'self' https:\/\/api4\.ipify\.org https:\/\/api6\.ipify\.org;/);
+  assert.doesNotMatch(csp[1], /ipapi/);
   assert.match(csp[1], /img-src 'self' data:;/);
   assert.match(csp[1], /object-src 'none'/);
   assert.match(csp[1], /base-uri 'none'/);
@@ -49,7 +50,7 @@ test('スクリプトは計算部・収集部・文言・画面の順に読み�
 test('タブとパネルが id で結ばれている（role・aria-controls・aria-labelledby・tabindex）', () => {
   const re = /<button class="tab[^"]*" id="tab-btn-(\w+)" type="button" role="tab" data-tab="(\w+)" aria-selected="(true|false)" aria-controls="(\w+)"/g;
   const tabs = [...html.matchAll(re)];
-  assert.equal(tabs.length, 3);
+  assert.equal(tabs.length, 4);
   for (const [, btnKey, dataKey, selected, panelKey] of tabs) {
     assert.equal(btnKey, dataKey);
     assert.equal(btnKey, panelKey);
@@ -63,27 +64,40 @@ test('主要な要素の id がそろっている', () => {
   assert.match(html, /<button id="lang-toggle" class="lang-toggle" type="button" aria-label="[^"]+" data-i18n="ui\.langButton" data-i18n-attr="aria-label:ui\.langLabel">EN<\/button>/);
   assert.match(html, /<button id="theme-toggle" class="theme-toggle" type="button" aria-label="[^"]+" data-i18n-attr="aria-label:theme\.toLight">/);
   assert.match(html, /<title data-i18n="ui\.docTitle">/);
-  const ids = ['theme-toggle', 'lang-toggle', 'simple-browser', 'simple-os', 'simple-os-source', 'simple-res', 'simple-ipv4', 'simple-ipv6', 'simple-isp', 'simple-lang', 'simple-tz',
-    'simple-hw', 'simple-cookie-dnt', 'fetch-ip', 'net-status', 'refresh-adv', 'copy-json', 'fp-id', 'fp-stability', 'fp-last', 'clear-last', 'prot-list', 'adv-grid'];
+  const ids = ['theme-toggle', 'lang-toggle', 'simple-browser', 'simple-os', 'simple-os-source', 'simple-res', 'simple-ipv4', 'simple-ipv6', 'simple-lang', 'simple-tz',
+    'simple-hw', 'simple-cookie-dnt', 'fetch-ip', 'net-status', 'refresh-adv', 'copy-json', 'fp-id', 'fp-stability', 'fp-last', 'clear-last', 'prot-list', 'adv-grid',
+    'cmp-a-current', 'cmp-a-paste', 'cmp-a-file', 'cmp-a-input', 'cmp-a-text', 'cmp-a-status', 'cmp-b-current', 'cmp-b-paste', 'cmp-b-file', 'cmp-b-input',
+    'cmp-b-text', 'cmp-b-status', 'cmp-run', 'cmp-swap', 'cmp-summary', 'cmp-ids', 'cmp-changed', 'cmp-list', 'study-table'];
   for (const id of ids) assert.ok(html.includes(`id="${id}"`), `id="${id}" がない`);
 });
 
 test('ボタンは type="button"、知らせの要素は aria-live', () => {
   for (const m of html.matchAll(/<button [^>]*>/g)) assert.match(m[0], /type="button"/, m[0]);
-  for (const id of ['net-status', 'fp-stability', 'fp-last', 'prot-list']) {
+  for (const id of ['net-status', 'fp-stability', 'fp-last', 'prot-list', 'cmp-a-status', 'cmp-b-status', 'cmp-changed']) {
     assert.ok(new RegExp(`id="${id}"[^>]*aria-live="polite"`).test(html), `${id} に aria-live がない`);
   }
 });
 
-test('IP の取得は押したときだけ（ボタンと接続先の説明がある）', () => {
+test('IP の取得は押したときだけ（ボタンと接続先の説明がある）。ISP の API は使わない', () => {
   assert.match(html, /<button class="btn" id="fetch-ip" type="button" data-i18n="net\.button">/);
-  assert.match(html, /data-i18n="net\.note">[^<]*ipify\.org[^<]*ipapi\.co/);
+  assert.match(html, /data-i18n="net\.note">[^<]*ipify\.org/);
+  assert.doesNotMatch(html, /ipapi/);
   assert.doesNotMatch(html, /データは外部送信しません|完全クライアントサイド/);
 });
 
 test('外部リンクはすべて rel="noopener noreferrer"。GitHub と参考リンク以外の外部 URL は書かない', () => {
   for (const m of html.matchAll(/<a [^>]*href="https?:\/\/[^"]+"[^>]*>/g)) assert.match(m[0], /rel="noopener noreferrer"/, m[0]);
   assert.match(html, /<a href="https:\/\/github\.com\/ipusiron\/browser-fingerprint-mirror" target="_blank" rel="noopener noreferrer">/);
+});
+
+test('比較タブ: ファイル入力は JSON だけを受け付け hidden、textarea に読み上げ用の名前がある', () => {
+  for (const side of ['a', 'b']) {
+    assert.ok(html.includes(`<input type="file" id="cmp-${side}-input" accept=".json,application/json" hidden />`), side);
+    const re = new RegExp(`<textarea class="cmp-text" id="cmp-${side}-text" rows="4" placeholder="[^"]+" `
+      + `data-i18n-attr="placeholder:cmp\\.placeholder;aria-label:cmp\\.textLabel${side.toUpperCase()}" aria-label="[^"]+"></textarea>`);
+    assert.match(html, re, side);
+  }
+  assert.match(html, /<div class="id-wrap" id="cmp-summary" hidden>/);
 });
 
 test('ユニーク度スコアの表示を残していない', () => {

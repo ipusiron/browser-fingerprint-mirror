@@ -25,7 +25,10 @@
   const DASH = String.fromCodePoint(0x2014);
   const SLASH = String.fromCodePoint(0xff0f);
 
-  const state = { data: null, firstData: null, ids: [], network: null, lastVisit: null, building: false, previousVisit: null, netStatus: null };
+  const state = {
+    data: null, firstData: null, ids: [], network: null, lastVisit: null, building: false, previousVisit: null, netStatus: null,
+    cmp: { a: null, b: null, status: { a: null, b: null }, result: null },
+  };
 
   /* ---------- localStorage（使えない環境でも落ちない） ---------- */
   function lsGet(key) {
@@ -52,7 +55,7 @@
   }
 
   /* ---------- タブ ---------- */
-  const TAB_KEYS = ['simple', 'advanced', 'learn'];
+  const TAB_KEYS = ['simple', 'advanced', 'compare', 'learn'];
 
   function selectTab(key, focus) {
     for (const btn of $$('.tab')) {
@@ -163,13 +166,6 @@
     const none = t('net.notFetched');
     $('#simple-ipv4').textContent = net ? (net.ipv4 || t('net.unsupported')) : none;
     $('#simple-ipv6').textContent = net ? (net.ipv6 || t('net.unsupported')) : none;
-    let isp = none;
-    if (net) {
-      if (net.isp) isp = net.asn ? net.isp + ' / ' + net.asn : net.isp;
-      else if (net.status === 'rateLimited') isp = t('net.rateLimited');
-      else isp = t('net.failed');
-    }
-    $('#simple-isp').textContent = isp;
   }
 
   function setNetStatus(key, params) {
@@ -184,7 +180,6 @@
     status.textContent = t('net.loading');
     $('#simple-ipv4').textContent = t('net.loading');
     $('#simple-ipv6').textContent = t('net.loading');
-    $('#simple-isp').textContent = t('net.loading');
     try {
       const net = await COL.fetchNetwork({ fetchFn: (url) => fetch(url), now: Date.now(), getItem: lsGet, setItem: lsSet });
       state.network = net;
@@ -192,8 +187,6 @@
       fillNetwork(net);
       const at = new Date(net.fetchedAt).toLocaleTimeString();
       if (net.status === 'cache') setNetStatus('net.statusCache', { at });
-      else if (net.status === 'rateLimited') setNetStatus('net.statusRateLimited');
-      else if (net.status === 'noisp') setNetStatus('net.statusNoisp');
       else if (net.status === 'failed') setNetStatus('net.statusFailed');
       else setNetStatus('net.statusOk', { at });
       renderAttributes();
@@ -398,6 +391,151 @@
     wrap.appendChild(table);
   }
 
+  /* ---------- 比較（スナップショット A/B） ---------- */
+  function cmpStatusEl(side) {
+    return $('#cmp-' + side + '-status');
+  }
+
+  function describeFor(data, key) {
+    const d = C.describeSnapshot(data);
+    const at = d.timestamp ? new Date(d.timestamp).toLocaleString() : t('cmp.statusNoTime');
+    return t(key, { browser: d.browser, os: d.os, at });
+  }
+
+  function setSnapshot(side, data, statusKey) {
+    state.cmp[side] = data;
+    state.cmp.status[side] = data ? statusKey : null;
+    renderCmpStatus(side);
+  }
+
+  function renderCmpStatus(side) {
+    const el = cmpStatusEl(side);
+    const data = state.cmp[side];
+    const key = state.cmp.status[side];
+    if (!data || !key) {
+      el.textContent = key && key.startsWith('cmp.err') ? t(key) : t('cmp.statusEmpty');
+      return;
+    }
+    el.textContent = describeFor(data, key);
+  }
+
+  function cmpError(side, key) {
+    state.cmp[side] = null;
+    state.cmp.status[side] = key;
+    cmpStatusEl(side).textContent = t(key);
+  }
+
+  function useCurrent(side) {
+    if (!state.data) return;
+    $('#cmp-' + side + '-text').value = JSON.stringify(state.data);
+    setSnapshot(side, JSON.parse(JSON.stringify(state.data)), 'cmp.statusCurrent');
+  }
+
+  function readPasted(side) {
+    const text = $('#cmp-' + side + '-text').value;
+    if (!text.trim()) {
+      cmpError(side, 'cmp.errEmpty');
+      return;
+    }
+    const r = C.parseSnapshot(text);
+    if (!r.ok) {
+      cmpError(side, 'cmp.err' + r.error.charAt(0).toUpperCase() + r.error.slice(1));
+      return;
+    }
+    setSnapshot(side, r.data, 'cmp.statusLoaded');
+  }
+
+  async function readFile(side, file) {
+    if (!file) return;
+    if (file.size > C.SNAPSHOT_MAX_BYTES) {
+      cmpError(side, 'cmp.errTooLarge');
+      return;
+    }
+    let text = '';
+    try {
+      text = await file.text();
+    } catch (e) {
+      cmpError(side, 'cmp.errFile');
+      return;
+    }
+    $('#cmp-' + side + '-text').value = text;
+    readPasted(side);
+  }
+
+  function runCompare() {
+    const a = state.cmp.a;
+    const b = state.cmp.b;
+    const summary = $('#cmp-summary');
+    const list = $('#cmp-list');
+    list.textContent = '';
+    if (!a || !b) {
+      summary.hidden = false;
+      $('#cmp-ids').textContent = '';
+      $('#cmp-changed').textContent = t('cmp.needBoth');
+      return;
+    }
+    const r = C.compareSnapshots(a, b);
+    state.cmp.result = r;
+    summary.hidden = false;
+    $('#cmp-ids').textContent = t('cmp.ids', { idA: r.idA, idB: r.idB, verdict: t(r.idA === r.idB ? 'cmp.idsSame' : 'cmp.idsDiff') });
+    const names = (keys) => keys.map((k) => t('attr.' + k)).join(', ');
+    if (r.changed.length === 0) $('#cmp-changed').textContent = t('cmp.changedNone', { total: r.total });
+    else if (r.changedInId.length === 0) $('#cmp-changed').textContent = t('cmp.changedNotInId', { keys: names(r.changed) });
+    else $('#cmp-changed').textContent = t('cmp.changed', { n: r.changed.length, total: r.total, keys: names(r.changed) });
+    for (const row of r.rows) {
+      const item = document.createElement('div');
+      item.className = 'cmp-row' + (row.same ? '' : ' diff');
+      const k = document.createElement('div');
+      k.className = 'k';
+      k.textContent = t('attr.' + row.key) + ' - ' + t(row.same ? 'cmp.same' : 'cmp.diff');
+      item.appendChild(k);
+      for (const [col, value] of [['cmp.colA', row.a], ['cmp.colB', row.b]]) {
+        const cell = document.createElement('div');
+        cell.className = 'cmp-cell';
+        const label = document.createElement('div');
+        label.className = 'cmp-col';
+        label.textContent = t(col);
+        const pre = document.createElement('pre');
+        pre.className = 'v';
+        pre.textContent = C.formatValue(value);
+        cell.appendChild(label);
+        cell.appendChild(pre);
+        item.appendChild(cell);
+      }
+      list.appendChild(item);
+    }
+  }
+
+  function swapSides() {
+    const a = state.cmp.a;
+    const sa = state.cmp.status.a;
+    state.cmp.a = state.cmp.b;
+    state.cmp.status.a = state.cmp.status.b;
+    state.cmp.b = a;
+    state.cmp.status.b = sa;
+    const ta = $('#cmp-a-text').value;
+    $('#cmp-a-text').value = $('#cmp-b-text').value;
+    $('#cmp-b-text').value = ta;
+    renderCmpStatus('a');
+    renderCmpStatus('b');
+    if (state.cmp.result) runCompare();
+  }
+
+  function initCompare() {
+    for (const side of ['a', 'b']) {
+      $('#cmp-' + side + '-current').addEventListener('click', () => useCurrent(side));
+      $('#cmp-' + side + '-paste').addEventListener('click', () => readPasted(side));
+      $('#cmp-' + side + '-file').addEventListener('click', () => $('#cmp-' + side + '-input').click());
+      $('#cmp-' + side + '-input').addEventListener('change', (e) => {
+        readFile(side, e.target.files && e.target.files[0]);
+        e.target.value = '';
+      });
+      renderCmpStatus(side);
+    }
+    $('#cmp-run').addEventListener('click', runCompare);
+    $('#cmp-swap').addEventListener('click', swapSides);
+  }
+
   /* ---------- 言語 ---------- */
   function rerenderText() {
     applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
@@ -407,6 +545,9 @@
       fillSimple(state.data);
       renderAdvanced(state.previousVisit);
     }
+    renderCmpStatus('a');
+    renderCmpStatus('b');
+    if (state.cmp.result) runCompare();
   }
 
   function toggleLanguage() {
@@ -423,6 +564,7 @@
     initTabs();
     renderStudyTable();
     $('#lang-toggle').addEventListener('click', toggleLanguage);
+    initCompare();
     $('#theme-toggle').addEventListener('click', toggleTheme);
     $('#fetch-ip').addEventListener('click', onFetchIp);
     $('#refresh-adv').addEventListener('click', () => { build(false); });
