@@ -1,37 +1,31 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Root contains a static site: `index.html` (UI), `script.js` (logic), `style.css` (styles), and `assets/` (images).
-- Keep the app dependency‑free and client‑only. If adding features, prefer small helpers in `script.js` with clear section headers. For large additions, create a new JS file and load it with `<script type="module">` to avoid a build step.
+- Static site, no build: `index.html` (UI), `script.js` (DOM only), `style.css`, `js/fp-core.js` (pure functions: SHA-256, detection, fingerprint ID, protections, validation), `js/fp-collect.js` (browser API collection and the opt-in IP lookup), `js/messages.js` (UI strings), `assets/` (screenshots), `test/` (node:test).
+- Keep the app dependency-free and client-only. Logic goes into `js/fp-core.js` so it can be tested in Node; browser-only reads go into `js/fp-collect.js`.
 
 ## Build, Test, and Development Commands
-- Run locally (any static server):
-  - Python: `python -m http.server 8000`
-  - Node: `npx http-server` or `npx serve`
-  - Windows: `start index.html` (no server; some APIs may behave differently).
-- No build or package install is required.
+- Run locally: `python -m http.server 8000` (or any static server). `file://` works except the clipboard.
+- `npm test` runs all tests with `node --test` (Node 22+, no packages). GitHub Actions runs it on push and pull_request.
 
 ## Coding Style & Naming Conventions
-- JavaScript: 2‑space indent, semicolons, single quotes, `const/let`, camelCase for variables/functions. Keep functions small and pure where possible.
-- DOM: IDs/classes in kebab‑case (e.g., `#theme-toggle`, `.score-wrap`). Reuse `$`/`$$` helpers for selection.
-- CSS: Use existing CSS variables in `:root`; prefer utility‑like, lowercase class names. Preserve dark/light theme tokens.
-- HTML: Maintain the strict CSP in the `<meta http-equiv="Content-Security-Policy">` tag; update `connect-src` only when introducing new endpoints.
+- JavaScript: 2-space indent, semicolons, single quotes, `const`/`let`, camelCase. Small pure functions in `fp-core.js`.
+- DOM: IDs/classes in kebab-case. Use `textContent`/`createElement`; never `innerHTML`.
+- CSS: use the variables in `:root` / `[data-theme="light"]`; `test/contrast.test.js` enforces 4.5:1 for text/background pairs.
+- UI strings live in `js/messages.js` (shared keys for ja/en); `script.js` must not contain Japanese literals.
 
 ## Testing Guidelines
-- Manual cross‑browser check (Chromium, Firefox, Safari/iOS). Verify:
-  - Tab switching, theme toggle, JSON copy.
-  - Simple/Advanced panels render without console errors.
-  - External lookups (ipify/ipapi) fail gracefully offline.
-- Optional: add lightweight unit tests only if code is modularized; keep runner dependency‑free.
+- Add tests next to the behavior you change: `core.test.js` (logic), `html.test.js` (markup/CSP), `contrast.test.js` (colors/layout rules), `format.test.js` (file hygiene), `readme.test.js` (README numbers come from code).
+- Manual check in Chromium and Firefox: tabs (mouse and arrow keys), theme toggle, fingerprint ID shown, "read again" keeps the same ID, IP button fetches only when pressed, JSON copy, no console errors or CSP violations.
 
 ## Commit & Pull Request Guidelines
-- Use Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `style:`, `chore:`.
-- Commits: small, focused, with a clear imperative subject (<= 72 chars).
-- PRs: include summary, rationale, before/after screenshots for UI, and any CSP or external‑request changes. Link related issues.
+- Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`) or a short Japanese subject. Small, focused commits that each pass `npm test`.
+- PRs: summary, rationale, before/after screenshots for UI changes, and any change to the CSP or to outbound requests.
 
 ## Security & Configuration Tips
-- Do not transmit fingerprint data to servers; this project is educational and client‑only. External calls are limited to ipify/ipapi. Keep timeouts and error handling robust.
-- Avoid adding analytics/trackers. If absolutely required, document the privacy impact and update the CSP.
+- Do not add outbound requests. The only allowed hosts are `api4.ipify.org`, `api6.ipify.org`, `ipapi.co`, and only behind the explicit button. Keep the meta CSP strict (no `unsafe-inline`, no external scripts/styles, no analytics).
+- Validate anything read from the network or localStorage before rendering (see `FPCore.parseIpify`, `parseIpapi`, `parseIpCache`).
+- Never commit screenshots that show a real IP address or ISP name; take them before pressing the IP button or with mocked responses.
 
-## Agent‑Specific Notes
-- Scope: these rules apply repo‑wide. Prefer minimal diffs, no frameworks, and no build tooling. Align with `CLAUDE.md` architecture notes when extending features.
+## Agent-Specific Notes
+- Scope: repo-wide. Prefer minimal diffs, no frameworks, no build tooling. Align with `CLAUDE.md` for architecture and data shape.

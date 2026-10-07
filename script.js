@@ -21,6 +21,8 @@
   const MARK_OFF = String.fromCodePoint(0x25cb);
   const MARK_NA = String.fromCodePoint(0x2013);
   const TIMES = String.fromCodePoint(0xd7);
+  const DASH = String.fromCodePoint(0x2014);
+  const SLASH = String.fromCodePoint(0xff0f);
 
   const state = { data: null, firstData: null, ids: [], network: null, lastVisit: null, building: false };
 
@@ -349,10 +351,49 @@
     }
   }
 
+  /* ---------- 座学: 研究の表（計算部の STUDY_TABLE から組み立てる） ---------- */
+  function renderStudyTable() {
+    const wrap = $('#study-table');
+    if (!wrap) return;
+    wrap.textContent = '';
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    for (let i = 0; i < 6; i++) {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.textContent = t('learn.s3.col' + i);
+      headRow.appendChild(th);
+    }
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    const cols = ['p2010', 'a2016', 'all2018', 'mobile2018', 'pc2018'];
+    const fmt = (v) => (v === null ? DASH : v[0].toFixed(3) + SLASH + v[1].toFixed(3));
+    const addRow = (cells) => {
+      const tr = document.createElement('tr');
+      cells.forEach((c, i) => {
+        const el = document.createElement(i === 0 ? 'th' : 'td');
+        if (i === 0) el.scope = 'row';
+        el.textContent = c;
+        tr.appendChild(el);
+      });
+      tbody.appendChild(tr);
+    };
+    for (const r of C.STUDY_TABLE) addRow([r.attr, ...cols.map((c) => fmt(r[c]))]);
+    const m = C.STUDY_META;
+    addRow([t('learn.s3.hm'), ...cols.map((c) => m.hm[c].toFixed(3))]);
+    addRow([t('learn.s3.count'), ...cols.map((c) => m.count[c].toLocaleString('en-US'))]);
+    addRow([t('learn.s3.unique'), ...cols.map((c) => m.unique[c] + '%')]);
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+  }
+
   /* ---------- 初期化 ---------- */
   function init() {
     initTheme();
     initTabs();
+    renderStudyTable();
     $('#theme-toggle').addEventListener('click', toggleTheme);
     $('#fetch-ip').addEventListener('click', onFetchIp);
     $('#refresh-adv').addEventListener('click', () => { build(false); });
