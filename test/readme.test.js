@@ -123,7 +123,7 @@ test('外部 API は ipify.org だけ（ipapi.co を書かない）。「外部�
 test('README の画像がすべて実在し、assets/ の PNG は README から参照されているものだけ。1枚ごとにキャプションがある', () => {
   const imgs = [...readme.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]);
   const local = imgs.filter((u) => !u.startsWith('http'));
-  assert.equal(local.length, 3, `画像の参照が ${local.length} 件`);
+  assert.equal(local.length, 4, `画像の参照が ${local.length} 件`);
   for (const rel of local) assert.ok(fs.existsSync(new URL(rel, ROOT)), `${rel} がない`);
   const pngs = fs.readdirSync(new URL('assets/', ROOT)).filter((f) => f.endsWith('.png'));
   for (const f of pngs) assert.ok(local.includes(`assets/${f}`), `assets/${f} が README から参照されていない`);
@@ -286,7 +286,7 @@ test('英語版の研究の表も計算部と一致する', () => {
 test('英語版の画像は assets/en/ にあってすべて実在し、assets/en/ の PNG は英語版から参照されているものだけ', () => {
   const imgs = [...readmeEn.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]);
   const local = imgs.filter((u) => !u.startsWith('http'));
-  assert.equal(local.length, 3);
+  assert.equal(local.length, 4);
   for (const rel of local) {
     assert.ok(rel.startsWith('assets/en/'), `英語版は英語の画面を使う: ${rel}`);
     assert.ok(fs.existsSync(new URL(rel, ROOT)), `${rel} がない`);

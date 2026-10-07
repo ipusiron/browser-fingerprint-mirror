@@ -427,6 +427,7 @@
 
   function useCurrent(side) {
     if (!state.data) return;
+    $('#cmp-' + side + '-text').value = JSON.stringify(state.data);
     setSnapshot(side, JSON.parse(JSON.stringify(state.data)), 'cmp.statusCurrent');
   }
 
