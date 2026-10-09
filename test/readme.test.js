@@ -305,3 +305,35 @@ test('英語版のディレクトリー構造にも全ファイルが載って�
   const names = (ls) => ls.map((l) => l.replace(/^[│├└─\s]+/, '').split(/\s+#/)[0].trim());
   assert.deepEqual(names(lines), names(jaTree), '日英のツリーのファイル名がそろっていない');
 });
+
+test('ユースケースの「このツールならではの使い方」の値は計算部と同じ（日英）', async () => {
+  const readmeEn2 = read('README.en.md');
+  const sha = await C.sha256Hex('hello');
+  assert.equal(sha, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824');
+  for (const md of [readme, readmeEn2]) assert.ok(md.includes(sha));
+  const base = {
+    ua: { userAgent: 'UA', uaData: 'x', uaHigh: 'y', platform: 'Win32' }, screen: '1920', language: 'ja',
+    intl: 'i', time: 'Asia/Tokyo', storage: 's',
+    privacy: { cookieEnabled: true, doNotTrack: null, globalPrivacyControl: null },
+    hardware: 'h', media: 'm', webgl: { vendor: 'G', renderer: 'R' },
+    canvas: { hash: 'c' }, audio: { hash: 'au' }, plugins: 'p', fonts: 'f'
+  };
+  const r1 = await C.fingerprintId(base);
+  assert.equal(r1.id.length, 16);
+  const reordered = {
+    fonts: 'f', plugins: 'p', audio: { hash: 'au' }, canvas: { hash: 'c' },
+    webgl: { renderer: 'R', vendor: 'G' }, media: 'm', hardware: 'h',
+    privacy: { globalPrivacyControl: null, doNotTrack: null, cookieEnabled: true },
+    storage: 's', time: 'Asia/Tokyo', intl: 'i', language: 'ja', screen: '1920',
+    ua: { platform: 'Win32', uaHigh: 'y', uaData: 'x', userAgent: 'UA' }
+  };
+  assert.equal((await C.fingerprintId(reordered)).id, r1.id);
+  assert.equal((await C.fingerprintId({ ...base, ip: '203.0.113.9' })).id, r1.id);
+  assert.notEqual((await C.fingerprintId({ ...base, screen: '1280' })).id, r1.id);
+  const uaPc = C.STUDY_TABLE.find((r) => r.attr === 'User-agent').pc2018[0];
+  assert.equal(C.formatBits(uaPc), '6.323');
+  assert.equal(C.STUDY_META.count.pc2018, 1816776);
+  assert.equal(Math.log2(1816776).toFixed(3), '20.793');
+  assert.equal(C.STUDY_META.hm.pc2018, 20.793);
+  for (const md of [readme, readmeEn2]) assert.ok(md.includes('6.323') && md.includes('1,816,776') && md.includes('20.793'));
+});
