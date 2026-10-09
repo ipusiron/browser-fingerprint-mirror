@@ -234,6 +234,12 @@ An iPad in desktop mode calls itself Macintosh, so `maxTouchPoints` of 2 or more
 
 ## 🎯 Use cases
 
+Ways of using this tool in particular
+
+- Confirming that canonicalizing before hashing makes the order not matter (hashing and signature classes): the fingerprint ID is the first 16 hex of the SHA-256 of a canonical JSON that collects 20 attributes and sorts the keys. So collecting the same values in a different key order gives the same ID. The hash itself is a pure-JavaScript implementation, and the SHA-256 of `hello` is `2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824`, matching Node's crypto. It is the same idea as canonicalizing JSON before signing it
+- Confirming that identifying bits are the number of halvings and are capped at the log2 of the population (information-theory classes): the User-Agent carries 6.323 bits on PC, enough to narrow to about 80 (2 to the 6.323). But however many attributes you add, the total cannot exceed the log2 of the population. For the 2018 PC population of 1,816,776, log2(1816776) = 20.793 bits is the ceiling. You can confirm with numbers that entropy is "the number of times you halve the candidates" and that its ceiling is set by the head count
+- Confirming that the ID has no IP address, so it does not change when you change your connection (how tracking works): the fingerprint ID is the first 16 hex (64 bits) of the SHA-256, and the IP address is not among the 20 attributes fed to the hash. So on the same device the ID does not change even when only the IP changes (a VPN or a different line), while changing the screen resolution does change the ID. You can show, by the difference in what the ID is made of, how tracking continues even after clearing cookies or changing the IP
+
 - Education (IT and security classes): students see that the fingerprint ID does not change in private browsing and experience how tracking works without cookies. The same screen shows that a VPN changes only the IP
 - Education (information theory): use the "bits" in the attribute list to explain entropy as "the number of times the candidates are halved" with values from the students' own environment. The drop from 2010 to 2018 (a different population) makes a good discussion topic
 - Work (web and legal teams): check what can actually be read from a browser before writing the "information we collect" section of a privacy policy. The tool's own privacy/disclaimer text is a reference
