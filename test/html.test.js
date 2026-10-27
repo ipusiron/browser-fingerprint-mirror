@@ -40,9 +40,9 @@ test('インラインのイベントハンドラーと style 属性がない', (
   assert.doesNotMatch(html, /<style/i);
 });
 
-test('スクリプトは計算部・収集部・文言・画面の順に読み込む（同一オリジンだけ）', () => {
+test('スクリプトはテーマ・計算部・収集部・文言・画面の順に読み込む（同一オリジンだけ）', () => {
   const srcs = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
-  assert.deepEqual(srcs, ['./js/fp-core.js', './js/fp-collect.js', './js/messages.js', './js/i18n.js', './script.js']);
+  assert.deepEqual(srcs, ['./js/theme-init.js', './js/fp-core.js', './js/fp-collect.js', './js/messages.js', './js/i18n.js', './script.js']);
   assert.doesNotMatch(html, /<script[^>]+src="https?:\/\//);
   assert.doesNotMatch(html, /<link[^>]+href="https?:\/\//);
 });

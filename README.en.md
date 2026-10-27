@@ -338,7 +338,8 @@ browser-fingerprint-mirror/
 │   ├── fp-collect.js        # Reads browser APIs. The IP lookup lives only here
 │   ├── fp-core.js           # Pure functions (SHA-256, detection, fingerprint ID, protections, validation, study tables)
 │   ├── i18n.js              # Language selection and static text replacement
-│   └── messages.js          # UI strings (Japanese and English)
+│   ├── messages.js          # UI strings (Japanese and English)
+│   └── theme-init.js        # Sets the theme (dark/light) before the first paint
 ├── package.json             # Defines npm test (node --test). No dependencies
 ├── script.js                # Page side (DOM building and events)
 ├── style.css                # Styles (dark/light)
@@ -349,7 +350,8 @@ browser-fingerprint-mirror/
     ├── html.test.js         # Static checks of index.html (CSP, ARIA, ids)
     ├── i18n.test.js         # Dictionary keys, HTML text versus dictionary, language selection
     ├── load.js              # Loads the page scripts into the tests
-    └── readme.test.js       # README tables and structure verified from code
+    ├── readme.test.js       # README tables and structure verified from code
+    └── theme-init.test.js   # Initial theme choice (OS setting, saved value) and where it is loaded
 ```
 
 ---

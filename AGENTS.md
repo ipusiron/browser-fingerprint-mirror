@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Static site, no build: `index.html` (UI), `script.js` (DOM only), `style.css`, `js/fp-core.js` (pure functions: SHA-256, detection, fingerprint ID, protections, validation), `js/fp-collect.js` (browser API collection and the opt-in IP lookup), `js/messages.js` (UI strings), `assets/` (screenshots), `test/` (node:test).
+- Static site, no build: `index.html` (UI), `script.js` (DOM only), `style.css`, `js/fp-core.js` (pure functions: SHA-256, detection, fingerprint ID, protections, validation), `js/fp-collect.js` (browser API collection and the opt-in IP lookup), `js/messages.js` (UI strings), `js/theme-init.js` (sets the theme in `<head>` before the first paint), `assets/` (screenshots), `test/` (node:test).
 - Keep the app dependency-free and client-only. Logic goes into `js/fp-core.js` so it can be tested in Node; browser-only reads go into `js/fp-collect.js`.
 
 ## Build, Test, and Development Commands
