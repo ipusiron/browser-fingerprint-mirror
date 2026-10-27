@@ -381,7 +381,8 @@ browser-fingerprint-mirror/
 │   ├── fp-collect.js        # ブラウザーのAPIから値を集める。IPの取得はここだけ
 │   ├── fp-core.js           # 純粋関数（SHA-256・推定・指紋ID・保護の検出・検証・研究の表）
 │   ├── i18n.js              # 言語の決定と静的な文言の差し替え
-│   └── messages.js          # 画面の文言（日本語・英語）
+│   ├── messages.js          # 画面の文言（日本語・英語）
+│   └── theme-init.js        # 最初の描画の前にテーマ（ダーク／ライト）を決める
 ├── package.json             # npm test（node --test）の定義。依存なし
 ├── script.js                # 画面側（DOMの組み立てと操作）
 ├── style.css                # スタイル（ダーク／ライト）
@@ -392,7 +393,8 @@ browser-fingerprint-mirror/
     ├── html.test.js         # index.htmlの静的検証（CSP・ARIA・id）
     ├── i18n.test.js         # 辞書のキー・HTMLと辞書の一致・言語の決定
     ├── load.js              # 画面と同じスクリプトをテストに読み込む
-    └── readme.test.js       # READMEの表と構造をコードから検証
+    ├── readme.test.js       # READMEの表と構造をコードから検証
+    └── theme-init.test.js   # 最初のテーマの判定（OSの設定・保存値）と読み込み位置
 ```
 
 ---

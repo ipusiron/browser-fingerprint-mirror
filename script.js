@@ -87,11 +87,9 @@
   }
 
   /* ---------- テーマ（保存がなければ OS の設定に従う） ---------- */
+  // 初回のテーマは <head> の js/theme-init.js が最初の描画の前に決める。ここではボタンを合わせるだけ
   function initTheme() {
-    const saved = lsGet(THEME_KEY);
-    let theme = saved === 'light' || saved === 'dark' ? saved : null;
-    if (!theme) theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-    applyTheme(theme);
+    applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
   }
 
   function applyTheme(theme) {
